@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         hostname: "static.vecteezy.com",
         protocol: "https",
       },
+      {
+        hostname: "lionbrand.com.au",
+        protocol: "https",
+      },
     ],
   },
 };
