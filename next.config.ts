@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         hostname: "lionbrand.com.au",
         protocol: "https",
       },
+      {
+        hostname: "stickerapp.ca",
+        protocol: "https",
+      },
     ],
   },
 };

@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Image from "next/image";
 export function LoginForm({
   className,
   ...props
@@ -50,7 +50,6 @@ export function LoginForm({
                 </span>
               </div>
               <div className="grid  gap-4">
-                
                 <Button variant="outline" type="button" className="w-full">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path
@@ -60,7 +59,6 @@ export function LoginForm({
                   </svg>
                   Login with Google
                 </Button>
-                
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
@@ -71,10 +69,13 @@ export function LoginForm({
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <img
-              src="/placeholder.svg"
+            <Image
+              src="https://stickerapp.ca/cdn-assets/images/stickers/663t.png"
               alt="Image"
+              width={600}
+              height={800}
               className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              priority
             />
           </div>
         </CardContent>
@@ -84,5 +85,5 @@ export function LoginForm({
         and <a href="#">Privacy Policy</a>.
       </div>
     </div>
-  )
+  );
 }
