@@ -70,11 +70,11 @@ export function LoginForm({
           </form>
           <div className="bg-muted relative hidden md:block">
             <Image
-              src="https://stickerapp.ca/cdn-assets/images/stickers/663t.png"
+              src="https://images.unsplash.com/photo-1482049016688-2d3e1b311543?q=80&w=820&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="Image"
               width={600}
               height={800}
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              className="absolute inset-0 h-full w-full object-cover "
               priority
             />
           </div>

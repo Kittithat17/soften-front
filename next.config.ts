@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
         protocol: "https",
       },
       {
-        hostname: "stickerapp.ca",
+        hostname: "images.unsplash.com",
         protocol: "https",
       },
     ],
