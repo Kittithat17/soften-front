@@ -218,15 +218,13 @@ export default function SearchPage({ recipes }: SearchPageProps) {
         <div className=" bg-white mx-4 my-4 rounded-xl shadow-sm p-6 max-w-6xl xl:mx-auto">
           {/* Ingredient Filter */}
           <div className="mb-6">
-            <div className="flex items-center space-x-4 mb-4">
+            <div className="flex items-center space-x-3 mb-4">
               <div className="flex-1 relative">
-                <span className="text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2">
-                  Filter by ingredients
-                </span>
                 <input
                   type="text"
                   readOnly
-                  className="w-full pl-32 pr-12 py-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer"
+                  placeholder="Filter by ingredients"
+                  className="h-11 w-full px-4 rounded-lg border border-gray-300 bg-gray-50 cursor-pointer placeholder:text-gray-500 focus:outline-none"
                   onClick={() => setShowIngredientInput(true)}
                 />
                 <button
@@ -237,17 +235,17 @@ export default function SearchPage({ recipes }: SearchPageProps) {
                 </button>
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm md:text-base leading-none"
+                  className="h-11 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm whitespace-nowrap"
                 >
                   Clear
                 </button>
                 <button
                   type="button"
-                  className="shrink-0 px-4 md:px-6 py-2.5 md:py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm md:text-base leading-none"
+                  className="h-11 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium whitespace-nowrap"
                 >
                   Search
                 </button>
@@ -305,7 +303,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
                     onClick={() => setShowIngredientInput(false)}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
-                    ปิด
+                    close
                   </button>
                 </div>
               </div>
