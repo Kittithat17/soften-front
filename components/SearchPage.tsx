@@ -213,7 +213,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
   return (
     <>
       <HeroHeader2 />
-      <div className=" relative pt-20 bg-gray-100 overflow-x-hidden">
+      <div className=" relative pt-20 bg-muted overflow-x-hidden">
         {/* Filters */}
         <div className=" bg-white mx-4 my-4 rounded-xl shadow-sm p-6 max-w-6xl xl:mx-auto">
           {/* Ingredient Filter */}
@@ -343,7 +343,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
 
         {/* Results */}
         <div className="max-w-6xl mx-auto px-4 pb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+          <h2 className="text-xl font-bold  mb-6">
             {filteredRecipes.length} Dishes Found
           </h2>
 
@@ -356,7 +356,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
                 onClick={clearAllFilters}
                 className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
               >
-                ล้างตัวกรอง
+                Clear Filter
               </button>
             </div>
           ) : (
