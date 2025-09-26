@@ -73,7 +73,7 @@ export function LoginForm({
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-yellow-400 font-bold text-lg dark:text-teal-600">
+              <Button type="submit" className="w-full bg-yellow-400 font-bold text-lg dark:text-teal-600 hover:bg-yellow-300">
                 Login
               </Button>
               <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
@@ -86,7 +86,7 @@ export function LoginForm({
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
-                <a href="/Register" className="underline underline-offset-4">
+                <a href="/Register" className="underline underline-offset-4 text-blue-500 hover:text-blue-300">
                   Register
                 </a>
               </div>

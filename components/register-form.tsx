@@ -91,7 +91,7 @@ export function RegisterForm({
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-yellow-400 font-bold text-lg dark:text-teal-600">
+              <Button type="submit" className="w-full bg-yellow-400 font-bold text-lg dark:text-teal-600 hover:bg-yellow-300">
                 Register
               </Button>
 
@@ -99,7 +99,7 @@ export function RegisterForm({
 
               <div className="text-center text-sm">
                 Already have an account?{" "}
-                <a href="/Login" className="underline underline-offset-4">
+                <a href="/Login" className="underline underline-offset-4 text-blue-500 hover:text-blue-300">
                   Login
                 </a>
               </div>
