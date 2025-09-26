@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, Plus, X, Star, Icon } from "lucide-react";
 import { Recipe } from "@/types/recipe";
-import RecipeDetailModal from "./RecipeDetailModal";
+
 import { HeroHeader2 } from "./hero8-head2";
 import type { LucideIcon } from "lucide-react";
 import { Eye } from "lucide-react";
@@ -20,6 +20,7 @@ import {
   Fish,
   Soup,
 } from "lucide-react";
+import Link from "next/link";
 
 // Available ingredients for filtering
 const availableIngredients = [
@@ -75,7 +76,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showIngredientInput, setShowIngredientInput] = useState(false);
   const [newIngredient, setNewIngredient] = useState("");
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  
 
   // 👇 วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
   const minutesFrom = (cookTime: string) => {
@@ -425,15 +426,13 @@ export default function SearchPage({ recipes }: SearchPageProps) {
                       })}
                     </div>
 
-                    <button
-                      onClick={() => setSelectedRecipe(recipe)}
-                      className="w-full bg-yellow-500 text-white py-3 rounded-lg font-medium hover:bg-yellow-600 transition-colors flex items-center justify-center space-x-2"
+                    <Link
+                      href={`/Menu/${recipe.id}`}
+                      className="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-yellow-500 py-3 font-medium transition-colors hover:bg-yellow-600"
                     >
-                      <span className="flex gap-3 text-black">
-                        <Eye />
-                        View Ricipes
-                      </span>
-                    </button>
+                      <Eye />
+                      View Recipes
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -442,13 +441,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
         </div>
 
         {/* Recipe Detail Modal */}
-        {selectedRecipe && (
-          <RecipeDetailModal
-            recipe={selectedRecipe}
-            isOpen={!!selectedRecipe}
-            onClose={() => setSelectedRecipe(null)}
-          />
-        )}
+        
       </div>
     </>
   );

@@ -1,5 +1,5 @@
 'use client';
-import { HeroHeader2 } from "@/components/hero8-head2"
+
 import SearchPage from "@/components/SearchPage";
 import { Recipe } from "@/types/recipe";
 
