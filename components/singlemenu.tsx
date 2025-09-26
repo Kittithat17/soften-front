@@ -9,39 +9,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import type { Recipe } from "@/types/recipe";
 import {
-    ChefHat,
-    Flame,
-    Timer,
-    Leaf,
-    HeartPulse,
-    CupSoda,
-    Cookie,
-    CakeSlice,
-    MoonStar,
-    Fish,
-    Soup,
-  } from "lucide-react";
+  ChefHat,
+  Flame,
+  Timer,
+  Leaf,
+  HeartPulse,
+  CupSoda,
+  Cookie,
+  CakeSlice,
+  MoonStar,
+  Fish,
+  Soup,
+} from "lucide-react";
+import { HeroHeader2 } from "./hero8-head2";
 
 type CategoryItem = {
-    id: string;
-    name: string;
-    icon: LucideIcon; // เก็บตัวคอมโพเนนต์ไอคอน
-    color: string;
-  };
-  // Categories with icons
-  const categories: CategoryItem[] = [
-    { id: "one-dish", name: "One-dish", icon: ChefHat, color: "bg-yellow-500" },
-    { id: "spicy", name: "Spicy", icon: Flame, color: "bg-red-500" },
-    { id: "quick", name: "Quick (< 15 min)", icon: Timer, color: "bg-green-500" },
-    { id: "vegetarian", name: "Vegetarian", icon: Leaf, color: "bg-green-600" },
-    { id: "healthy", name: "healthy", icon: HeartPulse, color: "bg-emerald-500" },
-    { id: "drinks", name: "drinks", icon: CupSoda, color: "bg-blue-500" },
-    { id: "snacks", name: "snacks", icon: Cookie, color: "bg-purple-500" },
-    { id: "dessert", name: "dessert", icon: CakeSlice, color: "bg-pink-500" },
-    { id: "halal", name: "halal", icon: MoonStar, color: "bg-teal-500" },
-    { id: "seafood", name: "seafood", icon: Fish, color: "bg-cyan-500" },
-    { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" }, // ใช้ Soup เป็นตัวแทนก๋วยเตี๋ยว/เส้น
-  ];
+  id: string;
+  name: string;
+  icon: LucideIcon; // เก็บตัวคอมโพเนนต์ไอคอน
+  color: string;
+};
+// Categories with icons
+const categories: CategoryItem[] = [
+  { id: "one-dish", name: "One-dish", icon: ChefHat, color: "bg-yellow-500" },
+  { id: "spicy", name: "Spicy", icon: Flame, color: "bg-red-500" },
+  { id: "quick", name: "Quick (< 15 min)", icon: Timer, color: "bg-green-500" },
+  { id: "vegetarian", name: "Vegetarian", icon: Leaf, color: "bg-green-600" },
+  { id: "healthy", name: "healthy", icon: HeartPulse, color: "bg-emerald-500" },
+  { id: "drinks", name: "drinks", icon: CupSoda, color: "bg-blue-500" },
+  { id: "snacks", name: "snacks", icon: Cookie, color: "bg-purple-500" },
+  { id: "dessert", name: "dessert", icon: CakeSlice, color: "bg-pink-500" },
+  { id: "halal", name: "halal", icon: MoonStar, color: "bg-teal-500" },
+  { id: "seafood", name: "seafood", icon: Fish, color: "bg-cyan-500" },
+  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" }, // ใช้ Soup เป็นตัวแทนก๋วยเตี๋ยว/เส้น
+];
 // mock ข้อมูลตรงตาม type
 const mockRecipes: Recipe[] = [
   {
@@ -124,127 +125,143 @@ export default function RecipeDetailPage() {
   };
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      {/* header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
-        <p className="text-gray-600 mb-4">{recipe.description}</p>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <div className="flex flex-wrap gap-2 my-4">
-            {recipe.categories.map((catId) => {
-              const cat = categories.find((c) => c.id === catId);
-              return (
-                <span
-                  key={catId}
-                  className={`${
-                    cat?.color || "bg-gray-400"
-                  } text-white px-3 py-1 rounded-full text-sm`}
-                >
-                  {cat?.name || catId}
-                </span>
-              );
-            })}
+    <>
+      <HeroHeader2 />
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8 pt-25">
+        {/* header */}
+        <div>
+          <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
+          <p className="text-gray-600 mb-4">{recipe.description}</p>
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex flex-wrap gap-2 my-4">
+              {recipe.categories.map((catId) => {
+                const cat = categories.find((c) => c.id === catId);
+                return (
+                  <span
+                    key={catId}
+                    className={`${
+                      cat?.color || "bg-gray-400"
+                    } text-white px-3 py-1 rounded-full text-sm`}
+                  >
+                    {cat?.name || catId}
+                  </span>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 md:flex md:items-center md:gap-6">
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" /> {recipe.cookTime}
+              </span>
+              <span className="flex items-center gap-1">
+                <Users className="h-4 w-4" /> {recipe.servings} ที่
+              </span>
+              <span className="flex items-center gap-1 col-span-2 md:col-span-1">
+                <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                {recipe.rating} ({recipe.totalRatings} รีวิว)
+              </span>
+            </div>
           </div>
-          <span className="flex items-center gap-1">
-            <Clock className="h-4 w-4" /> {recipe.cookTime}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-4 w-4" /> {recipe.servings} ที่
-          </span>
-          <span className="flex items-center gap-1">
-            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-            {recipe.rating} ({recipe.totalRatings} รีวิว)
-          </span>
         </div>
-      </div>
 
-      {/* image */}
-      <img
-        src={recipe.image}
-        alt={recipe.title}
-        className="w-full h-150 object-cover rounded-lg"
-      />
+        {/* image */}
+        <div className="relative w-full overflow-hidden rounded-lg aspect-[4/3] md:aspect-[16/9]">
+          <img
+            src={recipe.image}
+            alt={recipe.title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        </div>
 
-      {/* ingredients */}
-      <Card>
-        <CardHeader>
-          <CardTitle>วัตถุดิบ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc pl-6 space-y-1">
-            {recipe.ingredients.map((ing, idx) => (
-              <li key={idx}>{ing}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+        {/* ingredients */}
+        <Card>
+          <CardHeader>
+            <CardTitle>วัตถุดิบ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc pl-6 space-y-1">
+              {recipe.ingredients.map((ing, idx) => (
+                <li key={idx}>{ing}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
 
-      {/* instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>วิธีทำ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="list-decimal pl-6 space-y-2">
-            {recipe.instructions.map((step, idx) => (
-              <li key={idx}>{step}</li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
+        {/* instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>วิธีทำ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recipe.instructions.map((instruction, index) => (
+                <div key={index} className="flex space-x-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="text-gray-700 leading-relaxed">
+                      {instruction}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* rating */}
-      <Card>
-        <CardHeader>
-          <CardTitle>ให้คะแนน</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((r) => (
-              <button
-                key={r}
-                onClick={() => handleRating(r)}
-                className={`text-2xl ${
-                  r <= userRating ? "text-yellow-400" : "text-gray-300"
-                } hover:text-yellow-400`}
-              >
-                ★
-              </button>
-            ))}
-            <span className="ml-2 text-sm text-gray-600">
-              {userRating > 0 ? `คุณให้ ${userRating} ดาว` : "คลิกเพื่อโหวต"}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+        {/* rating */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Rating</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => handleRating(r)}
+                  className={`text-2xl ${
+                    r <= userRating ? "text-yellow-400" : "text-gray-300"
+                  } hover:text-yellow-400`}
+                >
+                  ★
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-gray-600">
+                {userRating > 0 ? `คุณให้ ${userRating} ดาว` : "(rating)"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* comments */}
-      <Card>
-        <CardHeader>
-          <CardTitle>คอมเมนต์ ({recipe.comments.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCommentSubmit} className="space-y-4 mb-4">
-            <Textarea
-              placeholder="แสดงความคิดเห็น..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-            <Button type="submit" disabled={isSubmitting || !comment.trim()}>
-              {isSubmitting ? "กำลังโพสต์..." : "โพสต์คอมเมนต์"}
-            </Button>
-          </form>
-          <ul className="space-y-2">
-            {recipe.comments.map((c) => (
-              <li key={c.id} className="border-b pb-2">
-                <p className="text-sm font-medium">{c.user}</p>
-                <p className="text-gray-700">{c.text}</p>
-                <p className="text-xs text-gray-500">{c.timestamp}</p>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </main>
+        {/* comments */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Comments ({recipe.comments.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCommentSubmit} className="space-y-4 mb-4">
+              <Textarea
+                placeholder="Comment..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+              <Button type="submit" disabled={isSubmitting || !comment.trim()}>
+                {isSubmitting ? "Posting..." : "Comment"}
+              </Button>
+            </form>
+            <ul className="space-y-2">
+              {recipe.comments.map((c) => (
+                <li key={c.id} className="border-b pb-2">
+                  <p className="text-sm font-medium">{c.user}</p>
+                  <p className="text-gray-700">{c.text}</p>
+                  <p className="text-xs text-gray-500">{c.timestamp}</p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </main>
+    </>
   );
 }
