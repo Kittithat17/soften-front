@@ -5,8 +5,8 @@ import { Recipe } from "@/types/recipe";
 import { User } from "@/types/user";
 
 const mockUsers: User[] = [
-  { id: "u1", username: "คุณสมหญิง" },
-  { id: "u2", username: "คุณมารี" },
+  { id: 1, username: "คุณสมหญิง" },
+  { id: 2, username: "คุณมารี" },
 ];
 const mockRecipes: Recipe[] = [
     {
