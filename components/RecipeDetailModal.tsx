@@ -22,8 +22,8 @@ export default function RecipeDetailModal({ recipe, isOpen, onClose }: RecipeDet
               <User className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{recipe.author}</h3>
-              <p className="text-sm text-gray-500">{recipe.timestamp}</p>
+              <h3 className="font-semibold text-gray-900">{recipe.author.username}</h3>
+              <p className="text-sm text-gray-500">{recipe.createdAt}</p>
             </div>
           </div>
           <button

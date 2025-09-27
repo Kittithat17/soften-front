@@ -2,16 +2,20 @@
 
 import SearchPage from "@/components/SearchPage";
 import { Recipe } from "@/types/recipe";
+import { User } from "@/types/user";
 
-
+const mockUsers: User[] = [
+  { id: "u1", username: "คุณสมหญิง" },
+  { id: "u2", username: "คุณมารี" },
+];
 const mockRecipes: Recipe[] = [
     {
       id: '1',
       title: 'Phad Kaprao Mookrob',
       description: 'The famous Pad Krapao Moo recipe from Je Chong mainly uses minced or sliced...',
       image: 'https://lionbrand.com.au/wp-content/uploads/2024/05/Pad-Kra-Pao-Moo-Grob-with-Prik-Nam-Pla-1.jpg',
-      author: 'คุณสมหญิง',
-      authorAvatar: undefined,
+      author: mockUsers[0],
+      
       rating: 4.8,
       totalRatings: 124,
       cookTime: '30 นาที',
@@ -36,17 +40,18 @@ const mockRecipes: Recipe[] = [
         'ปรุงรสด้วยน้ำปลา น้ำมะนาว น้ำตาลปี๊บ',
         'โรยด้วยพริกขี้หนูแห้ง เสิร์ฟร้อนๆ'
       ],
-      timestamp: '2 ชั่วโมงที่แล้ว',
+      createdAt: '2 ชั่วโมงที่แล้ว',
       comments: [
         {
           id: '1',
-          user: 'คุณมารี',
+          user: mockUsers[1],
           text: 'อร่อยมากเลยค่ะ ทำตามแล้วสำเร็จ!',
-          timestamp: '1 ชั่วโมงที่แล้ว'
+          createdAt: '1 ชั่วโมงที่แล้ว'
         }
       ]
     },
 ];
+
     export default function SearchPageRoute() {
         return (
           <>

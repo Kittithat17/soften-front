@@ -1,9 +1,10 @@
+import { User } from "./user";
+
 export interface Comment {
     id: string;
-    user: string;
-    avatar?: string;
+    user: User;
     text: string;
-    timestamp: string;
+    createdAt: string;
   }
   
 export interface Recipe {
@@ -11,8 +12,7 @@ export interface Recipe {
     title: string;
     description: string;
     image: string;
-    author: string;
-    authorAvatar?: string;
+    author: User;
     rating: number;
     totalRatings: number;
     cookTime: string;
@@ -20,7 +20,7 @@ export interface Recipe {
     categories: string[];
     ingredients: string[];
     instructions: string[];
-    timestamp: string;
+    createdAt: string;
     comments: Comment[];
   }
   
