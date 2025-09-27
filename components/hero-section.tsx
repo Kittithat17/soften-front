@@ -8,11 +8,11 @@ export default function HeroSection() {
   return (
     <>
       <HeroHeader />
-      <main className="overflow-x-hidden">
+      <main className="overflow-x-hidden ">
         <section
           className={[
             "relative isolate text-white",
-            "bg-[#140405]",
+            "bg-[#140405]","min-h-dvh",
             "bg-[radial-gradient(1200px_620px_at_70%_40%,#3a0d0d_0%,#1a0606_35%,#0e0303_100%)]",
           ].join(" ")}
         >
@@ -51,7 +51,7 @@ export default function HeroSection() {
                 Discover tasty recipes from around the world. Share your own and get inspired anytime.
                 </p>
 
-                <div className="mt-12 flex flex-col items-center justify-center gap-2 sm:flex-row lg:justify-start">
+                <div className="mt-12 flex flex-col items-center justify-center gap-7 sm:flex-row lg:justify-start">
                   <Button
                     asChild
                     size="lg"
