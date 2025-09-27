@@ -50,8 +50,8 @@ const categories: CategoryItem[] = [
 
 //mockuser
 const mockUsers: User[] = [
-    { id: "u1", username: "คุณสมหญิง" },
-    { id: "u2", username: "คุณมารี" },
+    { id: 1, username: "คุณสมหญิง" },
+    { id: 2, username: "คุณมารี" },
   ];
   
 
