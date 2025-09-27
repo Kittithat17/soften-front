@@ -1,3 +1,4 @@
+//Google OAuth login button component
 "use client";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";

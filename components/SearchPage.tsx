@@ -21,6 +21,7 @@ import {
   Soup,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 // Available ingredients for filtering
 const availableIngredients = [
@@ -366,7 +367,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
                   className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                 >
                   <div className="relative">
-                    <img
+                    <Image
                       src={recipe.image}
                       alt={recipe.title}
                       className="w-full h-60 object-cover"

@@ -7,7 +7,7 @@ export const Logo = ({ className }: { className?: string }) => {
     return (
         <Image
         className=""
-        src="https://cdn-icons-png.freepik.com/512/5246/5246749.png"
+        src="/images/eggHD.png"
         alt="Abstract Object"
         height="50"
         width="50"
