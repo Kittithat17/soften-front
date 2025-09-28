@@ -34,20 +34,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // hydrate จาก localStorage ครั้งแรก
   useEffect(() => {
     const t = localStorage.getItem("access_token");
-    const raw = localStorage.getItem("role"); // string | null
+    const raw = localStorage.getItem("role");
     setToken(t);
     setRole(isRole(raw) ? raw : null);
   }, []);
 
-  // sync ข้ามแท็บ 
+  // sync ข้ามแท็บ
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "access_token" || e.key === "role") {
-        const t = localStorage.getItem("access_token");
-        const raw = localStorage.getItem("role");
-        setToken(t);
-        setRole(isRole(raw) ? raw : null);
-      }
+    const onStorage = () => {
+      const t = localStorage.getItem("access_token");
+      const raw = localStorage.getItem("role");
+      setToken(t);
+      setRole(isRole(raw) ? raw : null);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -68,15 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           cache: "no-store",
         });
         if (res.ok) {
-            const me = await res.json();
-            const nextUser: User | null = (me?.user ?? me ?? null) as User | null;
-            setUser(nextUser);
+          const me = await res.json();
+          const nextUser: User | null = (me?.user ?? me ?? null) as User | null;
+          setUser(nextUser);
 
           const raw = nextUser?.role ?? localStorage.getItem("role");
           if (isRole(raw)) {
             setRole(raw);
             localStorage.setItem("role", raw);
-          } 
+          }
+          // ❌ ไม่ else ล้าง role เดิมทิ้ง
         } else if (res.status === 401 || res.status === 403) {
           localStorage.removeItem("access_token");
           localStorage.removeItem("role");
@@ -104,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const data = await res.json();
       const tok: string | undefined = data?.token;
-      const rawRole = data?.Role; // unknown
+      const rawRole = data?.Role;
 
       if (!tok) throw new Error("Missing token in response");
 
@@ -114,12 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isRole(rawRole)) {
         localStorage.setItem("role", rawRole);
         setRole(rawRole);
-      } else {
-        localStorage.removeItem("role");
-        setRole(null);
       }
+      // ❌ ถ้า backend ไม่ส่ง role ก็ไม่ต้องลบค่าเดิมออก
 
-      setUser((data?.user ?? null) as User | null);
+      // user จะไป fetch จาก /api/userprofile ทีหลัง
+      setUser(null);
     },
     [API]
   );
@@ -133,9 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const hasRole = useCallback(
-    (roles: Role[]) => {
-      return role ? roles.includes(role) : false;
-    },
+    (roles: Role[]) => (role ? roles.includes(role) : false),
     [role]
   );
 
