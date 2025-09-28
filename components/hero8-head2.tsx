@@ -5,6 +5,8 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { ModeToggle } from "./mode-toggle";
+import { useAuth } from "@/app/context/AuthContext";
+import LogoutButton from "./LogoutButton";
 
 const menuItems = [
   { name: "Features", href: "#link" },
@@ -15,6 +17,7 @@ const menuItems = [
 
 export const HeroHeader2 = () => {
   const [menuState, setMenuState] = React.useState(false);
+  const { user, token } = useAuth();
   return (
     <header>
       <nav
@@ -73,16 +76,32 @@ export const HeroHeader2 = () => {
                 </ul>
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/Login">
-                    <span>Login</span>
-                  </Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link href="/Register">
-                    <span>Sign Up</span>
-                  </Link>
-                </Button>
+              {token && user ? (
+                  <>
+                    <span className="text-sm font-medium">{user.email}</span>
+                    {user.profile && (
+                      <img
+                        src={user.profile}
+                        alt="profile"
+                        className="h-8 w-8 rounded-full"
+                      />
+                    )}
+                    <LogoutButton />
+                  </>
+                ) : (
+                  <>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/Login">
+                        <span>Login</span>
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm">
+                      <Link href="/Register">
+                        <span>Sign Up</span>
+                      </Link>
+                    </Button>
+                  </>
+                )}
                 <ModeToggle />
               </div>
             </div>

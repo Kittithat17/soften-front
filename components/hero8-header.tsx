@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { ModeToggle } from "./mode-toggle";
-
+import { useAuth } from "@/app/context/AuthContext";
 const menuItems = [
   { name: "Features", href: "#link" },
   { name: "Solution", href: "#link" },
@@ -15,6 +15,7 @@ const menuItems = [
 
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false);
+  const { user, token } = useAuth();
   return (
     <header>
       <nav

@@ -1,3 +1,4 @@
+//login form component
 'use client';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     setError(null); setSubmitting(true);
     try {
       await login(username, password);
-      router.replace("/"); // สำเร็จ → ไปหน้าแรก (หรือจะ route ตาม role ก็ได้)
+      router.replace("/Menu"); // สำเร็จ → ไปหน้าแรก (หรือจะ route ตาม role ก็ได้)
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Login failed";
