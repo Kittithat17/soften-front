@@ -12,12 +12,13 @@ const nextConfig: NextConfig = {
         hostname: "static.vecteezy.com",
         protocol: "https",
       },
+      
       {
-        hostname: "lionbrand.com.au",
+        hostname: "images.unsplash.com",
         protocol: "https",
       },
       {
-        hostname: "images.unsplash.com",
+        hostname: "hungryinthailand.com",
         protocol: "https",
       },
     ],

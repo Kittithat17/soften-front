@@ -12,8 +12,8 @@ const mockRecipes: Recipe[] = [
     {
       id: '1',
       title: 'Phad Kaprao Mookrob',
-      description: 'The famous Pad Krapao Moo recipe from Je Chong mainly uses minced or sliced...',
-      image: 'https://lionbrand.com.au/wp-content/uploads/2024/05/Pad-Kra-Pao-Moo-Grob-with-Prik-Nam-Pla-1.jpg',
+      description: 'The famous Pad Krapao Moo recipe from Je Chong mainly uses minced or sliced. pork belly stir-fried with holy basil and lots of chilies.',
+      image: 'https://hungryinthailand.com/wp-content/uploads/2023/05/thai-basil-pork-belly-1.webp',
       author: mockUsers[0],
       
       rating: 4.8,

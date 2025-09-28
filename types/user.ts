@@ -7,4 +7,4 @@ export type User = {
   profile?: string;
 };
 
-export type Role = "admin" | "user" | "" | undefined;
+export type Role = "admin" | "user" 
