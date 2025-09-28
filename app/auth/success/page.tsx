@@ -20,7 +20,7 @@ function AuthSuccessInner() {
 
     (async () => {
       try {
-        const me = await fetch(`${API}/api/me`, {
+        const me = await fetch(`${API}/api/userprofile`, {
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => r.json());
         const role = me?.user?.role ?? null;

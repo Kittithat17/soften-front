@@ -63,23 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         setLoading(true);
-        const res = await fetch(`${API}/api/me`, {
+        const res = await fetch(`${API}/api/userprofile`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
         if (res.ok) {
-          const me = await res.json();
-          const nextUser: User | null = me?.user ?? null;
-          setUser(nextUser);
+            const me = await res.json();
+            const nextUser: User | null = (me?.user ?? me ?? null) as User | null;
+            setUser(nextUser);
 
           const raw = nextUser?.role ?? localStorage.getItem("role");
           if (isRole(raw)) {
             setRole(raw);
             localStorage.setItem("role", raw);
-          } else {
-            setRole(null);
-            localStorage.removeItem("role");
-          }
+          } 
         } else if (res.status === 401 || res.status === 403) {
           localStorage.removeItem("access_token");
           localStorage.removeItem("role");
@@ -107,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const data = await res.json();
       const tok: string | undefined = data?.token;
-      const rawRole = data?.role ?? data?.user?.role; // unknown
+      const rawRole = data?.Role; // unknown
 
       if (!tok) throw new Error("Missing token in response");
 
