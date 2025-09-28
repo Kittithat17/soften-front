@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import React from "react";
 import { ModeToggle } from "./mode-toggle";
 import { useAuth } from "@/app/context/AuthContext";
+import LogoutButton from "./LogoutButton";
 const menuItems = [
   { name: "Features", href: "#link" },
   { name: "Solution", href: "#link" },
@@ -74,16 +75,29 @@ export const HeroHeader = () => {
                 </ul>
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/Login">
-                    <span>Login</span>
-                  </Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link href="/Register">
-                    <span>Sign Up</span>
-                  </Link>
-                </Button>
+              {token && user ? (
+                  <>
+                  <Button asChild variant="outline" className=" rounded-full">
+                      <Link href="/profile" >
+                        <span>Profile</span>
+                      </Link>
+                    </Button>
+                    <LogoutButton />
+                  </>
+                ) : (
+                  <>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/Login">
+                        <span>Login</span>
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm">
+                      <Link href="/Register">
+                        <span>Sign Up</span>
+                      </Link>
+                    </Button>
+                  </>
+                )}
                 <ModeToggle />
               </div>
             </div>
