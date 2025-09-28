@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Logo } from "./logo";
-import { Menu, X } from "lucide-react";
+import { Menu, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { ModeToggle } from "./mode-toggle";
@@ -32,7 +32,8 @@ export const HeroHeader2 = () => {
                 aria-label="home"
                 className="flex items-center space-x-2 font-black text-xl"
               >
-                <Logo />Cook<span className="text-yellow-400">pedia</span>
+                <Logo />
+                Cook<span className="text-yellow-400">pedia</span>
               </Link>
 
               <button
@@ -76,16 +77,13 @@ export const HeroHeader2 = () => {
                 </ul>
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-              {token && user ? (
+                {token && user ? (
                   <>
-                    <span className="text-sm font-medium">{user.email}</span>
-                    {user.profile && (
-                      <img
-                        src={user.profile}
-                        alt="profile"
-                        className="h-8 w-8 rounded-full"
-                      />
-                    )}
+                  <Button asChild variant="outline" className=" rounded-full">
+                      <Link href="/profile" >
+                        <span>Profile</span>
+                      </Link>
+                    </Button>
                     <LogoutButton />
                   </>
                 ) : (

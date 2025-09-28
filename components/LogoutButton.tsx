@@ -13,7 +13,7 @@ export default function LogoutButton() {
     router.replace("/Login");
   };
   return (
-    <Button variant="outline" onClick={onClick}>
+    <Button variant="outline" onClick={onClick} className="hover:bg-red-400">
       Logout
     </Button>
   );
