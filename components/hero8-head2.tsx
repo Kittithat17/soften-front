@@ -78,7 +78,7 @@ export const HeroHeader2 = () => {
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
                 {token && user ? (
                   <>
-                  <Button asChild variant="outline" className=" rounded-full">
+                  <Button asChild variant="outline" >
                       <Link href="/profile" >
                         <span>Profile</span>
                       </Link>
