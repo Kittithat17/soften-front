@@ -1,15 +1,16 @@
 //profile/page.tsx
 
 import Profile from "@/components/Profile"
-import Link from "next/link"
+import RequireAuth from "@/components/RequireAuth"
+
 
 
 
 const profilePage = () => {
   return (
-    <div>
+    <RequireAuth>
         <Profile/>
-    </div>
+    </RequireAuth>
   )
 }
 export default profilePage
