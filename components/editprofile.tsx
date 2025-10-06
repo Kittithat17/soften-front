@@ -161,7 +161,7 @@ export default function EditProfilePage() {
       }
 
       const res = await fetch(`${API}/api/userprofile`, {
-        method: "POST",
+        method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
         body: fd, // อย่าตั้ง Content-Type เอง ให้ browser ใส่ boundary ให้
       });
