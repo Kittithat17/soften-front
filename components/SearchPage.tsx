@@ -78,7 +78,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
   const [newIngredient, setNewIngredient] = useState("");
   
 
-  // 👇 วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
+  // วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
   const minutesFrom = (cookTime: string) => {
     // รองรับ "30 นาที", "15 min", "8mins", "12" เป็นต้น
     const m = cookTime.match(/\d+/);
@@ -440,7 +440,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
           )}
         </div>
 
-        {/* Recipe Detail Modal */}
+       
         
       </div>
     </>

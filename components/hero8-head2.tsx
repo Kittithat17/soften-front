@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Logo } from "./logo";
-import { Menu, UserRound, X } from "lucide-react";
+import { Menu,  X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { ModeToggle } from "./mode-toggle";
@@ -76,7 +76,7 @@ export const HeroHeader2 = () => {
                 </ul>
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                {token && user ? (
+                {token  ? (
                   <>
                   <Button asChild variant="outline" >
                       <Link href="/profile" >
