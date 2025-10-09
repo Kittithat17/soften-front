@@ -1,3 +1,4 @@
+//single menu detail page
 "use client";
 
 import { useParams } from "next/navigation";
