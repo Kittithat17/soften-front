@@ -1,6 +1,7 @@
+//components/SearchPage.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Plus, X, Star, Icon } from "lucide-react";
 import { Recipe } from "@/types/recipe";
 
@@ -22,28 +23,96 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+/** ---------- Types ---------- */
+type CategorySlug =
+  | "one-dish"
+  | "spicy"
+  | "quick"
+  | "vegetarian"
+  | "healthy"
+  | "drinks"
+  | "snacks"
+  | "dessert"
+  | "halal"
+  | "seafood"
+  | "noodles"
+  | "rice";
+
+interface ApiPost {
+  post_id: number | string;
+  menu_name?: string;
+  title?: string;
+  story?: string;
+  Details?: string;
+  image_url?: string;
+  categories_tags?: Array<number | string>;
+  ingredients_tags?: Array<number | string>;
+  ingredient_names?: string[];
+  ingredients?: string[];
+  instructions?: string[];
+}
+interface ApiOwner {
+  username?: string;
+  profile_image?: string;
+  created_date?: string;
+  created_time?: string;
+}
+
+interface ApiEnvelope {
+  owner_post?: ApiOwner;
+  post?: ApiPost;
+}
+type ApiItem = ApiPost | ApiEnvelope;
+
+const isEnvelope = (x: ApiItem): x is ApiEnvelope =>
+  typeof (x as ApiEnvelope).post !== "undefined";
+
+interface PostsResponse {
+  posts?: Array<ApiPost | ApiEnvelope>;
+  data?: Array<ApiPost | ApiEnvelope>;
+}
+const CATEGORY_ID_TO_SLUG: Record<number, string> = {
+  1: "one-dish",
+  2: "spicy",
+  3: "quick",
+  4: "vegetarian",
+  5: "healthy",
+  6: "drinks",
+  7: "snacks",
+  8: "dessert",
+  9: "halal",
+  10: "seafood",
+  11: "noodles",
+  12: "rice",
+};
+const labelToSlug = (s: string): CategorySlug =>
+  s
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, "")
+    .replace(/\s+/g, "-") as CategorySlug;
+
 // Available ingredients for filtering
 const availableIngredients = [
-  "หมู",
-  "ข้าว",
-  "กระเทียม",
-  "พริก",
-  "ไข่",
-  "กุ้ง",
-  "ไก่",
-  "ปลา",
-  "หอม",
-  "ขิง",
-  "มะนาว",
+  "Pork",
+  "Rice",
+  "Garlic",
+  "Chili",
+  "Egg",
+  "Shrimp",
+  "Chicken",
+  "Fish",
+  "Onion",
+  "Soy sauce",
+  "Lime",
   "น้ำปลา",
-  "น้ำตาล",
+  "Sugar",
   "เห็ด",
   "ผัก",
-  "มะเขือเทศ",
+  "Tomato",
   "ถั่วงอก",
-  "นม",
-  "เนื้อ",
-  "เส้น",
+  "Milk",
+  "Beef",
+  "Noodle",
 ];
 type CategoryItem = {
   id: string;
@@ -63,20 +132,172 @@ const categories: CategoryItem[] = [
   { id: "dessert", name: "dessert", icon: CakeSlice, color: "bg-pink-500" },
   { id: "halal", name: "halal", icon: MoonStar, color: "bg-teal-500" },
   { id: "seafood", name: "seafood", icon: Fish, color: "bg-cyan-500" },
-  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" }, // ใช้ Soup เป็นตัวแทนก๋วยเตี๋ยว/เส้น
+  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" }, 
+  { id: "rice", name: "Rice", icon: ChefHat, color: "bg-yellow-600" },// ใช้ Soup เป็นตัวแทนก๋วยเตี๋ยว/เส้น
 ];
 
-interface SearchPageProps {
-  recipes: Recipe[];
-}
-
-export default function SearchPage({ recipes }: SearchPageProps) {
+export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showIngredientInput, setShowIngredientInput] = useState(false);
   const [newIngredient, setNewIngredient] = useState("");
+  const API = process.env.NEXT_PUBLIC_API_BASE!;
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+
+  const INGREDIENT_ID_TO_NAME: Record<number, string> = {
+    1:"Vegetable",2:"Fruit",3:"Meat",4:"Seafood",5:"Poultry",
+    6:"Dairy",7:"Egg",8:"Grain",9:"Legume"
+  };
   
+  // ใช้เสมอเวลาจะ “ได้เลข” หรือ “ไม่มี ingredient_names”
+const normalizeIngredientTags = (p: ApiPost): string[] => {
+  // 1) ถ้า API/createdPayload มีชื่อมาแล้ว ใช้อันนี้
+  if (Array.isArray(p.ingredient_names) && p.ingredient_names.length) {
+    return Array.from(new Set(p.ingredient_names.filter(Boolean)));
+  }
+
+  const raw = p.ingredients_tags ?? [];
+
+  // 2) ถ้าเป็น array ของ number (หรือ string ของตัวเลข) → map id -> name
+  const asArray = Array.isArray(raw) ? raw : [];
+  const numericIds = asArray
+    .map((v) => {
+      if (typeof v === "number") return v;
+      const s = String(v).trim();
+      return /^\d+$/.test(s) ? Number(s) : NaN;
+    })
+    .filter((n) => Number.isFinite(n)) as number[];
+
+  if (numericIds.length > 0) {
+    const names = Array.from(
+      new Set(
+        numericIds
+          .map((id) => INGREDIENT_ID_TO_NAME[id])
+          .filter(Boolean)
+      )
+    );
+    return names;
+  }
+  const namesFromStrings = Array.from(
+    new Set(
+      asArray
+        .map((v) => String(v).trim())
+        .filter(Boolean)
+    )
+  );
+  return namesFromStrings;
+};
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRecipes = async () => {
+      try {
+        const res = await fetch(`${API}/getallpost`, { cache: "no-store" });
+        const raw = (await res.json()) as unknown;
+
+        let items: Array<ApiPost | ApiEnvelope> = [];
+        if (Array.isArray(raw)) {
+          items = raw as Array<ApiPost | ApiEnvelope>;
+        } else if (raw && typeof raw === "object") {
+          const r = raw as PostsResponse;
+          if (Array.isArray(r.posts)) items = r.posts!;
+          else if (Array.isArray(r.data)) items = r.data!;
+        }
+
+        const posts: ApiPost[] = items.map((it: ApiItem) =>
+          isEnvelope(it) ? it.post! : it
+        );
+        
+        // map --> Recipe
+        const mapped: Recipe[] = posts.map((p, idx) => {
+          const catSlugs: CategorySlug[] = (p.categories_tags ?? [])
+            .map((v) => (typeof v === "number" ? CATEGORY_ID_TO_SLUG[v] : labelToSlug(String(v))))
+            .filter(Boolean) as CategorySlug[];
+        
+          const ingTags: string[] = normalizeIngredientTags(p);
+        
+          const safeId = p.post_id != null && p.post_id !== "" ? String(p.post_id) : `tmp-${Date.now()}-${idx}`;
+        
+          return {
+            id: safeId,
+            title: p.menu_name || p.title || "Untitled",
+            description: p.story || p.Details || "",
+            image: p.image_url || "/default-image.png",
+            author: { id: 0, username: "Unknown" },
+            rating: 4.5,
+            totalRatings: 0,
+            cookTime: "30 นาที",
+            servings: 1,
+            categories: catSlugs,
+            ingredients: p.ingredients ?? [],
+            ingredientsTags: ingTags,              
+            instructions: p.instructions ?? [],
+            createdAt: "วันนี้",
+            comments: [],
+          };
+        });
+
+        if (!cancelled) setRecipes(mapped);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setError("Failed to load recipes.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchRecipes();
+
+    const onCreated = (e: Event) => {
+      const evt = e as CustomEvent<ApiPost>;
+      const detail = evt.detail;
+      if (!detail) return;
+    
+      const catSlugs: CategorySlug[] = (detail.categories_tags ?? [])
+        .map((v) =>
+          typeof v === "number" ? CATEGORY_ID_TO_SLUG[v] : labelToSlug(String(v))
+        )
+        .filter(Boolean) as CategorySlug[];
+    
+      const ingTags: string[] = normalizeIngredientTags(detail); // ✅ เห็นแน่ เพราะย้ายออกมาแล้ว
+    
+      const safeId =
+        detail.post_id != null && detail.post_id !== ""
+          ? String(detail.post_id)
+          : `tmp-${Date.now()}`;
+    
+      const newItem: Recipe = {
+        id: safeId,
+        title: detail.menu_name || detail.title || "Untitled",
+        description: detail.story || detail.Details || "",
+        image: detail.image_url || "/default-image.png",
+        author: { id: 0, username: "Unknown" },
+        rating: 4.5,
+        totalRatings: 0,
+        cookTime: "30 นาที",
+        servings: 1,
+        categories: catSlugs,
+        ingredients: detail.ingredients ?? [],
+        ingredientsTags: ingTags, // ✅ ชื่อแทนเลข
+        instructions: detail.instructions ?? [],
+        createdAt: "วันนี้",
+        comments: [],
+      };
+    
+      setRecipes((prev) => [newItem, ...prev]);
+    };
+    
+    window.addEventListener("recipe:created", onCreated as EventListener);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("recipe:created", onCreated as EventListener);
+    };
+  }, [API]);
 
   // วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
   const minutesFrom = (cookTime: string) => {
@@ -167,12 +388,16 @@ export default function SearchPage({ recipes }: SearchPageProps) {
 
     // Filter by ingredients
     const matchesIngredients =
-      selectedIngredients.length === 0 ||
-      selectedIngredients.every((ingredient) =>
-        recipe.ingredients.some((recipeIngredient) =>
-          recipeIngredient.toLowerCase().includes(ingredient.toLowerCase())
-        )
+    selectedIngredients.length === 0 ||
+    selectedIngredients.every((kw) => {
+      const kwLow = kw.toLowerCase();
+      const tags = (recipe.ingredientsTags ?? []).map((t) =>
+        String(t).toLowerCase()
       );
+      const ings = (recipe.ingredients ?? []).map((i) => i.toLowerCase());
+  
+      return tags.some((t) => t.includes(kwLow)) || ings.some((i) => i.includes(kwLow));
+    });
 
     // Filter by categories (simplified - you can expand this logic)
     const matchesCategories =
@@ -214,6 +439,7 @@ export default function SearchPage({ recipes }: SearchPageProps) {
   return (
     <>
       <HeroHeader2 />
+
       <div className=" relative pt-20 bg-muted overflow-x-hidden">
         {/* Filters */}
         <div className=" bg-white mx-4 my-4 rounded-xl shadow-sm p-6 max-w-6xl xl:mx-auto">
@@ -342,106 +568,113 @@ export default function SearchPage({ recipes }: SearchPageProps) {
 
         {/* Results */}
         <div className="max-w-6xl mx-auto px-4 pb-8">
-          <h2 className="text-xl font-bold  mb-6">
-            {filteredRecipes.length} Dishes Found
-          </h2>
-
-          {filteredRecipes.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-xl font-medium text-gray-900 mb-2">Not Found</h3>
-              <p className="text-gray-500 mb-4">try again</p>
-              <button
-                onClick={clearAllFilters}
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Clear Filter
-              </button>
+          {loading ? (
+            <div className="text-center py-20 text-gray-500">
+              Loading recipes...
             </div>
+          ) : error ? (
+            <div className="text-center py-20 text-red-500">{error}</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRecipes.map((recipe) => (
-                <div
-                  key={recipe.id}
-                  className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="relative">
-                    <img
-                      src={recipe.image}
-                      alt={recipe.title}
-                      className="w-full h-60 object-cover"
-                    />
-                    <div className="absolute top-3 right-3 bg-yellow-500 text-white px-2 py-1 rounded-lg flex items-center space-x-1">
-                      <span className="font-bold">
-                        {recipe.rating.toFixed(1)}
-                      </span>
-                      <Star className="h-3 w-3 fill-current" />
-                    </div>
-                  </div>
+            <>
+              <h2 className="text-xl font-bold mb-6">
+                {filteredRecipes.length} Dishes Found
+              </h2>
 
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
-                      {recipe.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {recipe.description}
-                    </p>
-
-                    {/* Ingredient tags */}
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {recipe.ingredients
-                        .slice(0, 3)
-                        .map((ingredient, index) => {
-                          const ingredientName = ingredient.split(" ")[0];
-                          return (
-                            <span
-                              key={index}
-                              className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs"
-                            >
-                              {ingredientName}
-                            </span>
-                          );
-                        })}
-                      {recipe.ingredients.length > 3 && (
-                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                          +{recipe.ingredients.length - 3}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Category badges */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {(recipe.categories ?? []).map((catId) => {
-                        const cat = categories.find((c) => c.id === catId);
-                        return (
-                          <span
-                            key={catId}
-                            className={`${
-                              cat?.color || "bg-gray-400"
-                            } text-white px-3 py-1 rounded-full text-xs`}
-                          >
-                            {cat?.name || catId}
-                          </span>
-                        );
-                      })}
-                    </div>
-
-                    <Link
-                      href={`/Menu/${recipe.id}`}
-                      className="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-yellow-500 py-3 font-medium transition-colors hover:bg-yellow-600"
-                    >
-                      <Eye />
-                      View Recipes
-                    </Link>
-                  </div>
+              {filteredRecipes.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">
+                    Not Found
+                  </h3>
+                  <p className="text-gray-500 mb-4">try again</p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Clear Filter
+                  </button>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredRecipes.map((recipe) => (
+                    <div
+                      key={recipe.id}
+                      className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                    >
+                      <div className="relative">
+                        <img
+                          src={recipe.image}
+                          alt={recipe.title}
+                          className="w-full h-60 object-cover"
+                        />
+                        <div className="absolute top-3 right-3 bg-yellow-500 text-white px-2 py-1 rounded-lg flex items-center space-x-1">
+                          <span className="font-bold">
+                            {recipe.rating.toFixed(1)}
+                          </span>
+                          <Star className="h-3 w-3 fill-current" />
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+                          {recipe.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                          {recipe.description}
+                        </p>
+
+                        {/* Main Ingredients (Tag) */}
+                        {(recipe.ingredientsTags?.length ?? 0) > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {recipe.ingredientsTags!.slice(0, 4).map((t, i) => (
+                              <span
+                                key={i}
+                                className="bg-yellow-200 text-yellow-800 hover:bg-yellow-300 px-3 py-1 rounded-md text-xs"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                           
+                            {recipe.ingredientsTags!.length > 4 && (
+                              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-xl text-xs">
+                                +{recipe.ingredientsTags!.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Category badges */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {(recipe.categories ?? []).map((catId) => {
+                            const cat = categories.find((c) => c.id === catId);
+                            return (
+                              <span
+                                key={catId}
+                                className={`${
+                                  cat?.color || "bg-gray-400"
+                                } text-white px-3 py-1 rounded-full text-xs`}
+                              >
+                                {cat?.name || catId}
+                              </span>
+                            );
+                          })}
+                        </div>
+
+                        <Link
+                          href={`/Menu/${recipe.id}`}
+                          className="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-yellow-500 py-3 font-medium transition-colors hover:bg-yellow-600"
+                        >
+                          <Eye />
+                          View Recipes
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
-
-       
-        
       </div>
     </>
   );

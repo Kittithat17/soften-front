@@ -57,7 +57,7 @@ const mockRecipes: Recipe[] = [
     export default function SearchPageRoute() {
         return (
           <>
-            <SearchPage recipes={mockRecipes} />
+            <SearchPage />
             <PostButton />
           </>
         );

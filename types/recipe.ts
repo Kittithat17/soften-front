@@ -7,7 +7,7 @@ export interface Comment {
     createdAt: string;
   }
   
-export interface Recipe {
+  export interface Recipe {
     id: string;
     title: string;
     description: string;
@@ -19,6 +19,7 @@ export interface Recipe {
     servings: number;
     categories: string[];
     ingredients: string[];
+    ingredientsTags?: string[];
     instructions: string[];
     createdAt: string;
     comments: Comment[];
