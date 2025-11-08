@@ -626,7 +626,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
                         {/* Main Ingredients (Tag) */}
                         {(recipe.ingredientsTags?.length ?? 0) > 0 && (
                           <div className="flex flex-wrap gap-2 mb-4">
-                            {recipe.ingredientsTags!.slice(0, 4).map((t, i) => (
+                            {recipe.ingredientsTags!.slice(0, 3).map((t, i) => (
                               <span
                                 key={i}
                                 className="bg-yellow-200 text-yellow-800 hover:bg-yellow-300 px-3 py-1 rounded-md text-xs"
@@ -635,9 +635,9 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
                               </span>
                             ))}
                            
-                            {recipe.ingredientsTags!.length > 4 && (
-                              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-xl text-xs">
-                                +{recipe.ingredientsTags!.length - 4}
+                            {recipe.ingredientsTags!.length > 3 && (
+                              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-xs">
+                                +{recipe.ingredientsTags!.length - 3}
                               </span>
                             )}
                           </div>
@@ -652,7 +652,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
                                 key={catId}
                                 className={`${
                                   cat?.color || "bg-gray-400"
-                                } text-white px-3 py-1 rounded-full text-xs`}
+                                } text-white px-3 py-1 rounded-md text-xs`}
                               >
                                 {cat?.name || catId}
                               </span>
