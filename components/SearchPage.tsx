@@ -154,6 +154,7 @@ export default function SearchPage() {
   };
   
   // ใช้เสมอเวลาจะ “ได้เลข” หรือ “ไม่มี ingredient_names”
+// eslint-disable-next-line react-hooks/exhaustive-deps
 const normalizeIngredientTags = (p: ApiPost): string[] => {
   // 1) ถ้า API/createdPayload มีชื่อมาแล้ว ใช้อันนี้
   if (Array.isArray(p.ingredient_names) && p.ingredient_names.length) {
@@ -297,7 +298,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
       cancelled = true;
       window.removeEventListener("recipe:created", onCreated as EventListener);
     };
-  }, [API]);
+  }, [API, normalizeIngredientTags]);
 
   // วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
   const minutesFrom = (cookTime: string) => {
@@ -505,7 +506,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
                     type="text"
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
-                    placeholder="พิมพ์วัตถุดิบที่ต้องการ..."
+                    placeholder="Type an ingredient and press Enter"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     onKeyPress={(e) => {
                       if (e.key === "Enter") {
