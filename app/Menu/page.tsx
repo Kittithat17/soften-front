@@ -1,5 +1,7 @@
+//Menu/page.tsx
 'use client';
 
+import PostButton from "@/components/postandform/postbutton";
 import SearchPage from "@/components/SearchPage";
 import { Recipe } from "@/types/recipe";
 import { User } from "@/types/user";
@@ -55,7 +57,8 @@ const mockRecipes: Recipe[] = [
     export default function SearchPageRoute() {
         return (
           <>
-            <SearchPage recipes={mockRecipes} />
+            <SearchPage />
+            <PostButton />
           </>
         );
       }

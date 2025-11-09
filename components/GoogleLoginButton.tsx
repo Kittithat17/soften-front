@@ -12,7 +12,7 @@ export default function GoogleLoginButton() {
       window.location.href = auth_url;
     };
   return (
-    <Button variant="outline" type="button" className="w-full"  onClick={startGoogleLogin}>
+    <Button variant="outline" type="button" className="w-full cursor-pointer"  onClick={startGoogleLogin}>
       <FcGoogle  />
       Continue with Google
     </Button>
