@@ -1,3 +1,4 @@
+//components/Profile.tsx โชว์โปรไฟล์ผู้ใช้
 "use client";
 
 import { useEffect, useState } from "react";

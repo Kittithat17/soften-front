@@ -7,6 +7,7 @@ import React from "react";
 import { ModeToggle } from "./mode-toggle";
 import { useAuth } from "@/app/context/AuthContext";
 import LogoutButton from "./LogoutButton";
+import { useRouter } from "next/navigation";
 
 const menuItems = [{ name: "About", href: "/about" }];
 
@@ -14,6 +15,24 @@ export const HeroHeader2 = () => {
   const [menuState, setMenuState] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false); // เฉพาะ UI มือถือ
   const { user, token } = useAuth();
+  const [q, setQ] = React.useState("");
+  const router = useRouter();
+
+  const submitSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const term = q.trim();
+  
+    if (!term) {
+      router.push("/Menu");
+      setShowSearch(false);
+      setMenuState(false);
+      return;
+    }
+  
+    router.push(`/Menu?q=${encodeURIComponent(term)}`);
+    setShowSearch(false);
+    setMenuState(false);
+  };
 
   return (
     <header>
@@ -74,20 +93,22 @@ export const HeroHeader2 = () => {
             </div>
 
             {/* ขวา (เดสก์ท็อป) */}
-            <div className="hidden lg:flex items-center gap-4">
-              {/* Search (Desktop UI) */}
-              <div className="group relative w-[360px] max-w-md">
-                <input
-                  type="text"
-                  placeholder="Search recipes..."
-                  className="w-full rounded-full border bg-muted/40 pl-11 pr-12 py-1.5 outline-none ring-0 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 transition placeholder:text-muted-foreground"
-                />
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-70"
-                  size={18}
-                />
-              </div>
-            </div>
+            <form
+              onSubmit={submitSearch}
+              className="hidden lg:block group relative w-[360px] max-w-md"
+            >
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitSearch()}
+                placeholder="Search recipes..."
+                className="w-full rounded-full border bg-muted/40 pl-11 pr-12 py-2.5 outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-70"
+                size={18}
+              />
+            </form>
 
             {/* กล่องเมนูแบบ overlay (โค้ดเดิม) */}
             <div className="bg-background in-data-[state=active]:block lg:in-data-[state=active]:flex mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border p-6 shadow-2xl shadow-zinc-300/20 md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:shadow-none dark:lg:bg-transparent">
@@ -149,7 +170,10 @@ export const HeroHeader2 = () => {
                   size={18}
                 />
                 <input
+                value={q}  
                   type="text"
+                  onChange={(e) => setQ(e.target.value)} 
+                  onKeyDown={(e) => e.key === "Enter" && submitSearch()}  
                   className="block w-full rounded-full border border-gray-300 bg-gray-50 pl-10 pr-12 py-2.5 leading-5 placeholder-gray-500 focus:outline-none"
                   placeholder="Search recipes..."
                 />

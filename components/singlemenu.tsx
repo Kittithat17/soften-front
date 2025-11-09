@@ -1,10 +1,11 @@
 //single menu detail page
+// components/RecipeDetailPage.tsx
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
-import { Clock, Users, Star, ChevronLeft, LucideIcon } from "lucide-react";
+import { Clock, Users, Star, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,14 +25,56 @@ import {
 } from "lucide-react";
 import { HeroHeader2 } from "./hero8-head2";
 import { User } from "@/types/user";
+import { useAuth } from "@/app/context/AuthContext";
+import type { User as AppUser } from "@/types/user";
 
+/** ---------- Local types (เข้มงวด, ไม่ใช้ any) ---------- */
+type CategorySlug =
+  | "one-dish"
+  | "spicy"
+  | "quick"
+  | "vegetarian"
+  | "healthy"
+  | "drinks"
+  | "snacks"
+  | "dessert"
+  | "halal"
+  | "seafood"
+  | "noodles"
+  | "rice";
+
+interface ApiPost {
+  post_id: number | string;
+  menu_name?: string;
+  story?: string;
+  image_url?: string;
+  categories_tags?: Array<number | string>;
+  ingredients_tags?: Array<number | string>;
+  ingredient_names?: string[];
+  ingredients?: Array<string | number>;
+  instructions?: Array<string | number>;
+}
+
+interface ApiOwner {
+  user_id?: number;
+  username?: string;
+  created_date?: string;
+  created_time?: string;
+}
+
+interface ApiEnvelope {
+  owner_post?: ApiOwner;
+  post?: ApiPost;
+}
+
+/** ---------- UI config ---------- */
 type CategoryItem = {
-  id: string;
+  id: CategorySlug;
   name: string;
-  icon: LucideIcon; // เก็บตัวคอมโพเนนต์ไอคอน
+  icon: LucideIcon;
   color: string;
 };
-// Categories with icons
+
 const categories: CategoryItem[] = [
   { id: "one-dish", name: "One-dish", icon: ChefHat, color: "bg-yellow-500" },
   { id: "spicy", name: "Spicy", icon: Flame, color: "bg-red-500" },
@@ -43,82 +86,190 @@ const categories: CategoryItem[] = [
   { id: "dessert", name: "dessert", icon: CakeSlice, color: "bg-pink-500" },
   { id: "halal", name: "halal", icon: MoonStar, color: "bg-teal-500" },
   { id: "seafood", name: "seafood", icon: Fish, color: "bg-cyan-500" },
-  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" }, // ใช้ Soup เป็นตัวแทนก๋วยเตี๋ยว/เส้น
+  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" },
+  { id: "rice", name: "Rice", icon: ChefHat, color: "bg-yellow-600" },
 ];
 
-//mockuser
-const mockUsers: User[] = [
-  { id: 1, username: "คุณสมหญิง" },
-  { id: 2, username: "sdddsds" },
-  { id: 3, username: "Max Verstappen" },
-];
+const CATEGORY_ID_TO_SLUG: Record<number, CategorySlug> = {
+  1: "one-dish",
+  2: "spicy",
+  3: "quick",
+  4: "vegetarian",
+  5: "healthy",
+  6: "drinks",
+  7: "snacks",
+  8: "dessert",
+  9: "halal",
+  10: "seafood",
+  11: "noodles",
+  12: "rice",
+};
 
-// mock ข้อมูลตรงตาม type
-const mockRecipes: Recipe[] = [
-  {
-    id: "1",
-    title: "Phad Kaprao Mookrob",
-    description:
-      "The famous Pad Krapao Moo recipe from Je Chong mainly uses minced or sliced. pork belly stir-fried with holy basil and lots of chilies.",
-    image:
-      "https://hungryinthailand.com/wp-content/uploads/2023/05/thai-basil-pork-belly-1.webp",
-    author: mockUsers[0],
+const INGREDIENT_ID_TO_NAME: Record<number, string> = {
+  1: "Vegetable",
+  2: "Fruit",
+  3: "Meat",
+  4: "Seafood",
+  5: "Poultry",
+  6: "Dairy",
+  7: "Egg",
+  8: "Grain",
+  9: "Legume",
+};
 
-    rating: 4.8,
-    totalRatings: 124,
-    cookTime: "30 นาที",
-    servings: 4,
-    categories: ["one-dish", "spicy"],
-    ingredients: [
-      "กุ้งแม่น้ำ 300 กรัม",
-      "เห็ดนางฟ้า 100 กรัม",
-      "มะเขือเทศ 2 ลูก",
-      "ใบมะกรูด 5 ใบ",
-      "ตะไคร้ 2 ต้น",
-      "ข่า 3 แว่น",
-      "พริกขี้หนูแห้ง 5 เม็ด",
-      "น้ำปลา 3 ช้อนโต๊ะ",
-      "น้ำมะนาว 3 ช้อนโต๊ะ",
-      "น้ำตาลปี๊บ 1 ช้อนโต๊ะ",
-    ],
-    instructions: [
-      "ต้มน้ำในหม้อ ใส่ตะไคร้ ข่า ใบมะกรูด",
-      "เติมกุ้งลงไป ต้มจนสุก",
-      "ใส่เห็ดนางฟ้า มะเขือเทศ",
-      "ปรุงรสด้วยน้ำปลา น้ำมะนาว น้ำตาลปี๊บ",
-      "โรยด้วยพริกขี้หนูแห้ง เสิร์ฟร้อนๆ",
-    ],
-    createdAt: "2 ชั่วโมงที่แล้ว",
-    comments: [
-      {
-        id: "1",
-        user: mockUsers[1],
-        text: "อร่อยมากเลยค่ะ ทำตามแล้วสำเร็จ!",
-        createdAt: "1 ชั่วโมงที่แล้ว",
-      },
-      {
-        id: "2",
-        user: mockUsers[2],
-        text: "hello sir i am max",
-        createdAt: "1 ชั่วโมงที่แล้ว",
-      },
-    ],
-  },
-];
+const labelToSlug = (s: string): CategorySlug =>
+  s
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, "")
+    .replace(/\s+/g, "-") as CategorySlug;
+
+/** ---------- Helpers (typed) ---------- */
+const normalizeIngredientTags = (p: ApiPost): string[] => {
+  // ถ้ามีชื่อมาอยู่แล้ว (เช่น ตอนสร้างโพสต์) ก็ใช้เลย
+  if (Array.isArray(p.ingredient_names) && p.ingredient_names.length > 0) {
+    return Array.from(new Set(p.ingredient_names.filter(Boolean)));
+  }
+
+  const raw = Array.isArray(p.ingredients_tags) ? p.ingredients_tags : [];
+
+  // แปลงกรณีเป็นหมายเลข id
+  const numericIds: number[] = raw
+    .map((v) =>
+      typeof v === "number" ? v : /^\d+$/.test(String(v)) ? Number(v) : NaN
+    )
+    .filter((n): n is number => Number.isFinite(n));
+
+  if (numericIds.length > 0) {
+    const names = numericIds
+      .map((id) => INGREDIENT_ID_TO_NAME[id])
+      .filter(Boolean);
+    return Array.from(new Set(names));
+  }
+
+  // กรณีเป็น string ชื่ออยู่แล้ว
+  const namesFromStrings = raw.map((v) => String(v).trim()).filter(Boolean);
+  return Array.from(new Set(namesFromStrings));
+};
+type JwtPayload = {
+  user_id?: number | string;
+  id?: number | string;
+  sub?: string;
+};
+
+function parseUserIdFromToken(token?: string | null): number | null {
+  if (!token) return null;
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(b64);
+    const obj = JSON.parse(json) as JwtPayload;
+    const raw =
+      obj.user_id ??
+      obj.id ??
+      (obj.sub && /^\d+$/.test(obj.sub) ? obj.sub : null);
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function getCurrentUserId(
+  user?: AppUser | null,
+  token?: string | null
+): number | null {
+  const direct =
+  user && "id" in user
+    ? Number((user as { id?: number | string }).id)
+    : user && "user_id" in user
+    ? Number((user as { user_id?: number | string }).user_id)
+    : null;
+  if (Number.isFinite(direct)) return Number(direct);
+  return parseUserIdFromToken(token);
+}
 
 export default function RecipeDetailPage() {
+  const { user: authUser, token } = useAuth();
+  const myUserId = useMemo(
+    () => getCurrentUserId(authUser, token),
+    [authUser, token]
+  );
+
   const params = useParams();
   const id = params?.id as string;
-  const recipe = mockRecipes.find((r) => r.id === id);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useEffect(() => {
+    const fetchRecipe = async () => {
+      try {
+        const API = process.env.NEXT_PUBLIC_API_BASE!;
+        const res = await fetch(`${API}/getpostbypostid/${id}`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to fetch");
 
-  if (!recipe) {
+        const p = data.post;
+        const u = data.owner_post;
+        if (!p) throw new Error("No recipe found");
+
+        const catSlugs: CategorySlug[] = (
+          Array.isArray(p.categories_tags) ? p.categories_tags : []
+        )
+          .map((v: number | string) =>
+            typeof v === "number"
+              ? CATEGORY_ID_TO_SLUG[v]
+              : labelToSlug(String(v))
+          )
+          .filter(Boolean) as CategorySlug[];
+
+        const mapped: Recipe = {
+          id: String(p.post_id),
+          title: p.menu_name ?? "Untitled",
+          description: p.story ?? "",
+          image: p.image_url ?? "/default-image.png",
+          author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
+          rating: 4.5,
+          totalRatings: 0,
+          cookTime: "30 นาที",
+          servings: 1,
+          categories: catSlugs,
+          ingredients: Array.isArray(p.ingredients)
+            ? p.ingredients.map(String)
+            : [],
+          ingredientsTags: normalizeIngredientTags(p),
+          instructions: Array.isArray(p.instructions)
+            ? p.instructions.map(String)
+            : [],
+          createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
+          comments: [],
+        };
+
+        setRecipe(mapped);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchRecipe();
+  }, [id]);
+  if (loading) {
+    return (
+      <main className="max-w-4xl mx-auto py-12 text-center">Loading…</main>
+    );
+  }
+  if (error || !recipe) {
     return (
       <main className="max-w-4xl mx-auto py-12 text-center">
-        <h1 className="text-2xl font-bold">ไม่พบสูตรอาหาร</h1>
+        <h1 className="text-2xl font-bold">{error ?? "ไม่พบสูตรอาหาร"}</h1>
         <Link href="/Menu">
           <Button className="mt-4">Go Back to Menu Page</Button>
         </Link>
@@ -139,15 +290,18 @@ export default function RecipeDetailPage() {
       setIsSubmitting(false);
     }, 800);
   };
-
+  const profileHref =
+    myUserId != null && Number(recipe.author.id) === myUserId
+      ? "/profile"
+      : `/userprofile/${recipe.author.id}`;
   return (
     <>
       <HeroHeader2 />
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8 pt-25">
-        {/* Author Header — ✅ คลิกไปหน้าโปรไฟล์ได้ */}
+        {/* Author Header */}
         <Card className="p-6">
           <Link
-            href={`/userprofile/${recipe.author.id}`}
+            href={profileHref}
             className="flex items-center space-x-3 p-1 group"
             aria-label={`go to profile ${recipe.author.username}`}
           >
@@ -173,6 +327,26 @@ export default function RecipeDetailPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
             <p className="text-gray-600 mb-4">{recipe.description}</p>
+
+            {/* ✅ Ingredient Tags (แสดงเหนือ category) */}
+            {(recipe.ingredientsTags?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-2 my-2">
+                {recipe.ingredientsTags!.slice(0, 4).map((t, i) => (
+                  <span
+                    key={i}
+                    className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-md text-xs font-medium"
+                  >
+                    {t}
+                  </span>
+                ))}
+                {recipe.ingredientsTags!.length > 4 && (
+                  <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
+                    +{recipe.ingredientsTags!.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-row flex-wrap gap-4 items-center text-sm text-gray-600">
               <div className="flex flex-wrap gap-2 my-4">
                 {recipe.categories.map((catId) => {
@@ -182,7 +356,7 @@ export default function RecipeDetailPage() {
                       key={catId}
                       className={`${
                         cat?.color || "bg-gray-400"
-                      } text-white px-3 py-2 rounded-full text-sm font-bold`}
+                      } text-white px-3 py-2 rounded-lg text-sm font-bold`}
                     >
                       {cat?.name || catId}
                     </span>
@@ -194,11 +368,11 @@ export default function RecipeDetailPage() {
                   <Clock className="h-4 w-4" /> {recipe.cookTime}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Users className="h-4 w-4" /> {recipe.servings} ที่
+                  <Users className="h-4 w-4" /> {recipe.servings} servings
                 </span>
                 <span className="flex items-center gap-1 col-span-2 md:col-span-1">
                   <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  {recipe.rating} ({recipe.totalRatings} รีวิว)
+                  {recipe.rating} ({recipe.totalRatings} Reviews)
                 </span>
               </div>
             </div>
@@ -208,7 +382,7 @@ export default function RecipeDetailPage() {
         {/* Ingredients */}
         <Card>
           <CardHeader>
-            <CardTitle>วัตถุดิบ</CardTitle>
+            <CardTitle>Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="list-disc pl-6 space-y-1">
@@ -222,7 +396,7 @@ export default function RecipeDetailPage() {
         {/* Instructions */}
         <Card>
           <CardHeader>
-            <CardTitle>วิธีทำ</CardTitle>
+            <CardTitle>Instructions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -295,23 +469,21 @@ export default function RecipeDetailPage() {
                       {c.user.username[0]}
                     </div>
                     {/* ตรามุมเล็ก ๆ แบบในภาพ (ถ้าไม่อยากได้ ลบ span นี้ได้เลย) */}
-                   
                   </Link>
 
                   {/* เนื้อคอมเมนต์ */}
                   <div className="flex-1">
                     {/* ชื่อผู้ใช้ */}
-                    
 
                     {/* กล่องคอมเมนต์พื้นเทาอ่อน โค้งมน */}
-                    
+
                     <div className=" inline-block rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
-                    <Link
-                      href={`/userprofile/${c.user.id}`}
-                      className="font-semibold inline-block"
-                    >
-                      {c.user.username}
-                    </Link>
+                      <Link
+                        href={`/userprofile/${c.user.id}`}
+                        className="font-semibold inline-block"
+                      >
+                        {c.user.username}
+                      </Link>
                       <p className="leading-relaxed">{c.text}</p>
                     </div>
 

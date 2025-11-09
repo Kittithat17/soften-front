@@ -22,6 +22,8 @@ import {
   Soup,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+
 
 /** ---------- Types ---------- */
 type CategorySlug =
@@ -137,6 +139,8 @@ const categories: CategoryItem[] = [
 ];
 
 export default function SearchPage() {
+  const searchParams = useSearchParams();
+const q = (searchParams.get("q") || "").trim();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -192,13 +196,17 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
   );
   return namesFromStrings;
 };
-  useEffect(() => {
-    let cancelled = false;
+useEffect(() => {
+  let cancelled = false;
 
-    const fetchRecipes = async () => {
-      try {
-        const res = await fetch(`${API}/getallpost`, { cache: "no-store" });
-        const raw = (await res.json()) as unknown;
+  const fetchRecipes = async () => {
+    try {
+      const endpoint = q
+        ? `${API}/searchpost/${encodeURIComponent(q)}`
+        : `${API}/getallpost`;
+
+      const res = await fetch(endpoint, { cache: "no-store" });
+      const raw = (await res.json()) as unknown;
 
         let items: Array<ApiPost | ApiEnvelope> = [];
         if (Array.isArray(raw)) {
@@ -298,7 +306,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
       cancelled = true;
       window.removeEventListener("recipe:created", onCreated as EventListener);
     };
-  }, [API, normalizeIngredientTags]);
+  }, [API, normalizeIngredientTags,q]);
 
   // วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
   const minutesFrom = (cookTime: string) => {
