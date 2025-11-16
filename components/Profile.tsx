@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HeroHeader2 } from "./hero8-head2";
 import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
+import type { OwnerPost } from "@/types/userPost";
 import Link from "next/link";
 
 interface SavedPost {
@@ -35,7 +36,8 @@ export default function Profile() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const { token, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [savedPosts, setSavedPost] = useState<SavedPost[]>([]); // ✅ Remove null, use empty array
+  const [savedPosts, setSavedPost] = useState<SavedPost[]>([]);
+  const [posts, setPosts] = useState<OwnerPost[]>([]); 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   
@@ -51,7 +53,7 @@ export default function Profile() {
       try {
         setErr(null);
         // Run both fetches in parallel
-        const [profileRes, savedPostRes] = await Promise.all([
+        const [profileRes, savedPostRes, postRes] = await Promise.all([
           fetch(`${API}/api/userprofile`, { // ✅ No ID - gets from token
             headers: { Authorization: `Bearer ${token}` },
             cache: "no-store",
@@ -60,25 +62,33 @@ export default function Profile() {
             headers: { Authorization: `Bearer ${token}` },
             cache: "no-store",
           }),
+          fetch(`${API}/api/mypost`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          }),
         ]);
         
         // Check both responses
         if (!profileRes.ok) throw new Error(await profileRes.text());
         if (!savedPostRes.ok) throw new Error(await savedPostRes.text());
+        if (!postRes.ok) throw new Error(await postRes.text());
         
         // Parse both responses
-        const [profileData, savedPostData] = await Promise.all([
+        const [profileData, savedPostData, postData] = await Promise.all([
           profileRes.json(),
-          savedPostRes.json()
+          savedPostRes.json(),
+          postRes.json()
         ]);
         
         console.log("Profile data:", profileData);
         console.log("Saved posts data:", savedPostData);
+        console.log("Saved posts data:", postData);
         console.log("Token Here :", token);
         
         if (!cancelled) {
           setProfile(profileData);
           setSavedPost(savedPostData.posts || []); // ✅ Access .posts from response
+          setPosts(postData || []);
         }
       } catch (e) {
         if (!cancelled)
@@ -93,20 +103,20 @@ export default function Profile() {
     };
   }, [API, token, authLoading]);
 
-  const posts = [
-    {
-      id: 1,
-      img: "https://plus.unsplash.com/premium_photo-1675252369719-dd52bc69c3df?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: 2,
-      img: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: 3,
-      img: "https://images.unsplash.com/photo-1484723091739-30a097e8f929?q=80&w=1049&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-  ];
+  // const posts = [
+  //   {
+  //     id: 1,
+  //     img: "https://plus.unsplash.com/premium_photo-1675252369719-dd52bc69c3df?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  //   },
+  //   {
+  //     id: 2,
+  //     img: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  //   },
+  //   {
+  //     id: 3,
+  //     img: "https://images.unsplash.com/photo-1484723091739-30a097e8f929?q=80&w=1049&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  //   },
+  // ];
 
   if (loading)
     return (
@@ -216,17 +226,23 @@ export default function Profile() {
             </TabsList>
 
             <TabsContent value="posts" className="p-6">
-              <div className="grid grid-cols-3 gap-4 sm:gap-5">
-                {posts.map((p) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={p.id}
-                    src={p.img}
-                    alt="food"
-                    className="aspect-square w-full rounded-2xl object-cover"
-                  />
-                ))}
-              </div>
+              {posts.length > 0 ? (
+                <div className="grid grid-cols-3 gap-4 sm:gap-5">
+                  {posts.map((post) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      // key={item.user_id}
+                      src={post.profile_image}
+                      alt="posts"
+                      className="aspect-square w-full rounded-2xl object-cover"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-600">
+                  You have not posted anything yet.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="likes" className="p-6">
