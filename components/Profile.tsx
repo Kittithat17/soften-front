@@ -1,4 +1,3 @@
-//components/Profile.tsx โชว์โปรไฟล์ผู้ใช้
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,13 +17,28 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
 import Link from "next/link";
 
+interface SavedPost {
+  owner_post: {
+    user_id: number;
+    username: string;
+    profile_image: string;
+    created_date: string;
+    created_time: string;
+  };
+  post: {
+    post_id: number;
+    image_url: string;
+  };
+}
+
 export default function Profile() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const { token, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [savedPosts, setSavedPost] = useState<SavedPost[]>([]); // ✅ Remove null, use empty array
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-
+  
   useEffect(() => {
     if (authLoading) return;
     if (!token) {
@@ -36,16 +50,39 @@ export default function Profile() {
     (async () => {
       try {
         setErr(null);
-        const res = await fetch(`${API}/api/userprofile`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data: UserProfile = await res.json();
-        if (!cancelled) setProfile(data);
+        // Run both fetches in parallel
+        const [profileRes, savedPostRes] = await Promise.all([
+          fetch(`${API}/api/userprofile`, { // ✅ No ID - gets from token
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          }),
+          fetch(`${API}/api/getallfavoritepost`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          }),
+        ]);
+        
+        // Check both responses
+        if (!profileRes.ok) throw new Error(await profileRes.text());
+        if (!savedPostRes.ok) throw new Error(await savedPostRes.text());
+        
+        // Parse both responses
+        const [profileData, savedPostData] = await Promise.all([
+          profileRes.json(),
+          savedPostRes.json()
+        ]);
+        
+        console.log("Profile data:", profileData);
+        console.log("Saved posts data:", savedPostData);
+        console.log("Token Here :", token);
+        
+        if (!cancelled) {
+          setProfile(profileData);
+          setSavedPost(savedPostData.posts || []); // ✅ Access .posts from response
+        }
       } catch (e) {
         if (!cancelled)
-          setErr(e instanceof Error ? e.message : "Fetch profile failed");
+          setErr(e instanceof Error ? e.message : "Fetch failed");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -75,9 +112,9 @@ export default function Profile() {
     return (
       <>
         <HeroHeader2 />
-       
       </>
     );
+    
   if (err)
     return (
       <>
@@ -97,10 +134,8 @@ export default function Profile() {
     <>
       <HeroHeader2 />
       <div className="mx-auto w-full max-w-6xl px-4 pt-24 pb-10">
-        {/* ===== Profile Header Card (Desktop look) / Stacked (Mobile) ===== */}
         <Card className="rounded-3xl border-none bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:bg-neutral-900">
           <div className="flex flex-col gap-6 md:flex-row md:items-center">
-            {/* Avatar + level */}
             <div className="flex flex-col items-center md:items-start">
               <div className="relative">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#F8D838] ring-4 ring-white md:h-28 md:w-28">
@@ -115,14 +150,10 @@ export default function Profile() {
                     <UserIcon className="h-14 w-14 text-black/80" />
                   )}
                 </div>
-
-                {/* chef small badge on avatar */}
                 <div className="absolute -left-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow">
                   🍳
                 </div>
               </div>
-
-              {/* level pill */}
               <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
                 <span className="inline-block h-2 w-24 overflow-hidden rounded-full bg-neutral-400/60">
                   <span className="block h-full w-[85%] bg-neutral-700" />
@@ -131,28 +162,19 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Middle info block */}
             <div className="flex-1">
-              {/* name + quick stats row (PC) */}
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold md:text-2xl">
                     {fullName}
                   </h2>
                   <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-neutral-600">
-                    <span>
-                      <b>10</b> posts
-                    </span>
-                    <span>
-                      <b>200</b> followers
-                    </span>
-                    <span>
-                      <b>400</b> following
-                    </span>
+                    <span><b>10</b> posts</span>
+                    <span><b>200</b> followers</span>
+                    <span><b>400</b> following</span>
                   </div>
                 </div>
 
-                {/* action buttons align right on desktop */}
                 <div className="mt-2 flex flex-col w-full gap-2 md:mt-0 md:w-auto">
                   <Button className="w-full gap-2 rounded-2xl bg-[#F8D838] text-black hover:bg-[#e7c92f] md:w-auto">
                     <Link href="/profile/edit" className="flex gap-2">
@@ -160,17 +182,13 @@ export default function Profile() {
                       Edit Profile
                     </Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 rounded-2xl md:w-auto"
-                  >
+                  <Button variant="outline" className="w-full gap-2 rounded-2xl md:w-auto">
                     <Award className="h-4 w-4" />
                     Badges(5)
                   </Button>
                 </div>
               </div>
 
-              {/* contact + bio bubble (Mobile style) */}
               <div className="mt-4 rounded-2xl bg-neutral-100 p-4 text-sm text-neutral-700">
                 <p>{email}</p>
                 <p className="mt-1">{phone}</p>
@@ -180,44 +198,24 @@ export default function Profile() {
           </div>
         </Card>
 
-        {/* ===== Tabs ===== */}
         <Card className="mt-6 overflow-hidden rounded-3xl border-none shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
           <Tabs defaultValue="posts" className="w-full">
-            <TabsList
-              className="
-                grid w-full grid-cols-3 rounded-none mt-[-24] sm:mt-[-24] sm:pb-9.5 
-                bg-neutral-300/70 
-                *:rounded-none
-              "
-            >
-              <TabsTrigger
-                value="posts"
-                className="data-[state=active]:bg-neutral-700  data-[state=active]:text-white py-3 ml-[-3] mt-[-5] "
-                aria-label="Posts"
-              >
+            <TabsList className="grid w-full grid-cols-3 rounded-none mt-[-24] sm:mt-[-24] sm:pb-9.5 bg-neutral-300/70 *:rounded-none">
+              <TabsTrigger value="posts" className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white py-3 ml-[-3] mt-[-5]">
                 <Grid2X2 className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Posts</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="likes"
-                className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white  py-3 ml-[-3] mt-[-5]"
-                aria-label="Likes"
-              >
+              <TabsTrigger value="likes" className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white py-3 ml-[-3] mt-[-5]">
                 <Heart className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Likes</span>
+                <span className="hidden sm:inline">Saved Posts</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="badges"
-                className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white py-3 mr-[-3] mt-[-5]"
-                aria-label="Badges"
-              >
+              <TabsTrigger value="badges" className="data-[state=active]:bg-neutral-700 data-[state=active]:text-white py-3 mr-[-3] mt-[-5]">
                 <BadgeIcon className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Badges</span>
               </TabsTrigger>
             </TabsList>
 
-            {/* Posts grid – PC 3 col, Mobile 3 little squares like mock */}
-            <TabsContent value="posts" className="p-5">
+            <TabsContent value="posts" className="p-6">
               <div className="grid grid-cols-3 gap-4 sm:gap-5">
                 {posts.map((p) => (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -232,9 +230,23 @@ export default function Profile() {
             </TabsContent>
 
             <TabsContent value="likes" className="p-6">
-              <p className="text-sm text-neutral-600">
-                You have no liked posts yet.
-              </p>
+              {savedPosts.length > 0 ? (
+                <div className="grid grid-cols-3 gap-4 sm:gap-5">
+                  {savedPosts.map((item) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={item.post.post_id}
+                      src={item.post.image_url}
+                      alt="savedpost"
+                      className="aspect-square w-full rounded-2xl object-cover"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-600">
+                  You have no liked posts yet.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="badges" className="p-6">

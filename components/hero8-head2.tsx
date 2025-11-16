@@ -15,6 +15,7 @@ export const HeroHeader2 = () => {
   const [menuState, setMenuState] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false); // เฉพาะ UI มือถือ
   const { user, token } = useAuth();
+  const currentUserId =  user?.id;
   const [q, setQ] = React.useState("");
   const router = useRouter();
 
@@ -131,7 +132,7 @@ export const HeroHeader2 = () => {
                 {token && user ? (
                   <>
                     <Button asChild variant="outline">
-                      <Link href="/profile">
+                      <Link href='/profile/'>
                         <span>Profile</span>
                       </Link>
                     </Button>
