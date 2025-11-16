@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Clock, Users, Star, LucideIcon } from "lucide-react";
+import { Clock, Users, Star, Heart, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -150,6 +150,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
   const namesFromStrings = raw.map((v) => String(v).trim()).filter(Boolean);
   return Array.from(new Set(namesFromStrings));
 };
+
 type JwtPayload = {
   user_id?: number | string;
   id?: number | string;
@@ -180,11 +181,11 @@ function getCurrentUserId(
   token?: string | null
 ): number | null {
   const direct =
-  user && "id" in user
-    ? Number((user as { id?: number | string }).id)
-    : user && "user_id" in user
-    ? Number((user as { user_id?: number | string }).user_id)
-    : null;
+    user && "id" in user
+      ? Number((user as { id?: number | string }).id)
+      : user && "user_id" in user
+      ? Number((user as { user_id?: number | string }).user_id)
+      : null;
   if (Number.isFinite(direct)) return Number(direct);
   return parseUserIdFromToken(token);
 }
@@ -202,9 +203,14 @@ export default function RecipeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Favorite functionality states
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
@@ -252,6 +258,26 @@ export default function RecipeDetailPage() {
         };
 
         setRecipe(mapped);
+
+        // Check if already favorited
+        if (token) {
+          try {
+            const favRes = await fetch(`${API}/api/getallfavoritepost`, {
+              headers: { Authorization: `Bearer ${token}` },
+              cache: "no-store",
+            });
+            if (favRes.ok) {
+              const favData = await favRes.json();
+              const posts = favData.posts || [];
+              const isAlreadyFavorited = posts.some(
+                (item: any) => String(item.post.post_id) === String(id)
+              );
+              setIsFavorited(isAlreadyFavorited);
+            }
+          } catch (err) {
+            console.error("Failed to check favorite status:", err);
+          }
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -260,20 +286,73 @@ export default function RecipeDetailPage() {
     };
 
     if (id) fetchRecipe();
-  }, [id]);
+  }, [id, token]);
+
+  const toggleFavorite = async () => {
+    if (!token) {
+      alert("Please login to save posts");
+      return;
+    }
+
+    setFavoriteLoading(true);
+    try {
+      const API = process.env.NEXT_PUBLIC_API_BASE!;
+
+      if (isFavorited) {
+        // Unfavorite
+        const res = await fetch(`${API}/api/unfavoritepost/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          setIsFavorited(false);
+          console.log("Unfavorited successfully");
+        } else {
+          throw new Error("Failed to unfavorite");
+        }
+      } else {
+        // Favorite
+        const res = await fetch(`${API}/api/favoritepost/${id}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          setIsFavorited(true);
+          console.log("Favorited successfully");
+        } else {
+          throw new Error("Failed to favorite");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+      alert("Failed to save post. Please try again.");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
-      <main className="max-w-4xl mx-auto py-12 text-center">Loading…</main>
+      <>
+        <HeroHeader2 />
+        <main className="max-w-4xl mx-auto py-12 text-center">Loading…</main>
+      </>
     );
   }
+
   if (error || !recipe) {
     return (
-      <main className="max-w-4xl mx-auto py-12 text-center">
-        <h1 className="text-2xl font-bold">{error ?? "ไม่พบสูตรอาหาร"}</h1>
-        <Link href="/Menu">
-          <Button className="mt-4">Go Back to Menu Page</Button>
-        </Link>
-      </main>
+      <>
+        <HeroHeader2 />
+        <main className="max-w-4xl mx-auto py-12 text-center">
+          <h1 className="text-2xl font-bold">{error ?? "ไม่พบสูตรอาหาร"}</h1>
+          <Link href="/Menu">
+            <Button className="mt-4">Go Back to Menu Page</Button>
+          </Link>
+        </main>
+      </>
     );
   }
 
@@ -290,29 +369,49 @@ export default function RecipeDetailPage() {
       setIsSubmitting(false);
     }, 800);
   };
+
   const profileHref =
     myUserId != null && Number(recipe.author.id) === myUserId
       ? "/profile"
       : `/userprofile/${recipe.author.id}`;
+
   return (
     <>
       <HeroHeader2 />
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8 pt-25">
         {/* Author Header */}
         <Card className="p-6">
-          <Link
-            href={profileHref}
-            className="flex items-center space-x-3 p-1 group"
-            aria-label={`go to profile ${recipe.author.username}`}
-          >
-            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-lg  transition">
-              {recipe.author.username[0]}
-            </div>
-            <div className="cursor-pointer">
-              <p className="text-sm font-semibold ">{recipe.author.username}</p>
-              <p className="text-xs text-gray-500">{recipe.createdAt}</p>
-            </div>
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link
+              href={profileHref}
+              className="flex items-center space-x-3 p-1 group"
+              aria-label={`go to profile ${recipe.author.username}`}
+            >
+              <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-lg transition">
+                {recipe.author.username[0]}
+              </div>
+              <div className="cursor-pointer">
+                <p className="text-sm font-semibold">
+                  {recipe.author.username}
+                </p>
+                <p className="text-xs text-gray-500">{recipe.createdAt}</p>
+              </div>
+            </Link>
+
+            {/* Favorite Button */}
+            <button
+              onClick={toggleFavorite}
+              disabled={favoriteLoading}
+              className={`p-3 rounded-full transition-all ${
+                isFavorited
+                  ? "bg-red-100 text-red-500"
+                  : "bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
+              } ${favoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              aria-label={isFavorited ? "Unfavorite" : "Favorite"}
+            >
+              <Heart className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`} />
+            </button>
+          </div>
 
           {/* Image */}
           <div className="relative w-full overflow-hidden rounded-lg aspect-[4/3] md:aspect-[16/9]">
@@ -328,7 +427,7 @@ export default function RecipeDetailPage() {
             <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
             <p className="text-gray-600 mb-4">{recipe.description}</p>
 
-            {/* ✅ Ingredient Tags (แสดงเหนือ category) */}
+            {/* Ingredient Tags */}
             {(recipe.ingredientsTags?.length ?? 0) > 0 && (
               <div className="flex flex-wrap gap-2 my-2">
                 {recipe.ingredientsTags!.slice(0, 4).map((t, i) => (
@@ -460,7 +559,7 @@ export default function RecipeDetailPage() {
             <ul className="space-y-4">
               {recipe.comments.map((c) => (
                 <li key={c.id} className="flex gap-3">
-                  {/* Avatar + ไปโปรไฟล์ได้ */}
+                  {/* Avatar */}
                   <Link
                     href={`/userprofile/${c.user.id}`}
                     className="shrink-0 relative"
@@ -468,16 +567,11 @@ export default function RecipeDetailPage() {
                     <div className="w-10 h-10 rounded-full bg-yellow-400 text-white font-bold grid place-items-center">
                       {c.user.username[0]}
                     </div>
-                    {/* ตรามุมเล็ก ๆ แบบในภาพ (ถ้าไม่อยากได้ ลบ span นี้ได้เลย) */}
                   </Link>
 
-                  {/* เนื้อคอมเมนต์ */}
+                  {/* Comment content */}
                   <div className="flex-1">
-                    {/* ชื่อผู้ใช้ */}
-
-                    {/* กล่องคอมเมนต์พื้นเทาอ่อน โค้งมน */}
-
-                    <div className=" inline-block rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
+                    <div className="inline-block rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
                       <Link
                         href={`/userprofile/${c.user.id}`}
                         className="font-semibold inline-block"
@@ -487,7 +581,7 @@ export default function RecipeDetailPage() {
                       <p className="leading-relaxed">{c.text}</p>
                     </div>
 
-                    {/* เวลา */}
+                    {/* Time */}
                     <div className="text-xs text-gray-500 mt-1">
                       {c.createdAt}
                     </div>

@@ -1,10 +1,9 @@
 //components/SearchPage.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, Plus, X, Star, Icon } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Search, Plus, X, Star } from "lucide-react";
 import { Recipe } from "@/types/recipe";
-
 import { HeroHeader2 } from "./hero8-head2";
 import type { LucideIcon } from "lucide-react";
 import { Eye } from "lucide-react";
@@ -23,7 +22,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
 
 /** ---------- Types ---------- */
 type CategorySlug =
@@ -53,6 +51,7 @@ interface ApiPost {
   ingredients?: string[];
   instructions?: string[];
 }
+
 interface ApiOwner {
   username?: string;
   profile_image?: string;
@@ -64,6 +63,7 @@ interface ApiEnvelope {
   owner_post?: ApiOwner;
   post?: ApiPost;
 }
+
 type ApiItem = ApiPost | ApiEnvelope;
 
 const isEnvelope = (x: ApiItem): x is ApiEnvelope =>
@@ -73,6 +73,7 @@ interface PostsResponse {
   posts?: Array<ApiPost | ApiEnvelope>;
   data?: Array<ApiPost | ApiEnvelope>;
 }
+
 const CATEGORY_ID_TO_SLUG: Record<number, string> = {
   1: "one-dish",
   2: "spicy",
@@ -87,6 +88,19 @@ const CATEGORY_ID_TO_SLUG: Record<number, string> = {
   11: "noodles",
   12: "rice",
 };
+
+const INGREDIENT_ID_TO_NAME: Record<number, string> = {
+  1: "Vegetable",
+  2: "Fruit",
+  3: "Meat",
+  4: "Seafood",
+  5: "Poultry",
+  6: "Dairy",
+  7: "Egg",
+  8: "Grain",
+  9: "Legume",
+};
+
 const labelToSlug = (s: string): CategorySlug =>
   s
     .toLowerCase()
@@ -116,12 +130,14 @@ const availableIngredients = [
   "Beef",
   "Noodle",
 ];
+
 type CategoryItem = {
   id: string;
   name: string;
-  icon: LucideIcon; // เก็บตัวคอมโพเนนต์ไอคอน
+  icon: LucideIcon;
   color: string;
 };
+
 // Categories with icons
 const categories: CategoryItem[] = [
   { id: "one-dish", name: "One-dish", icon: ChefHat, color: "bg-yellow-500" },
@@ -134,40 +150,17 @@ const categories: CategoryItem[] = [
   { id: "dessert", name: "dessert", icon: CakeSlice, color: "bg-pink-500" },
   { id: "halal", name: "halal", icon: MoonStar, color: "bg-teal-500" },
   { id: "seafood", name: "seafood", icon: Fish, color: "bg-cyan-500" },
-  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" }, 
-  { id: "rice", name: "Rice", icon: ChefHat, color: "bg-yellow-600" },// ใช้ Soup เป็นตัวแทนก๋วยเตี๋ยว/เส้น
+  { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" },
+  { id: "rice", name: "Rice", icon: ChefHat, color: "bg-yellow-600" },
 ];
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-const q = (searchParams.get("q") || "").trim();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [showIngredientInput, setShowIngredientInput] = useState(false);
-  const [newIngredient, setNewIngredient] = useState("");
-  const API = process.env.NEXT_PUBLIC_API_BASE!;
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-
-  const INGREDIENT_ID_TO_NAME: Record<number, string> = {
-    1:"Vegetable",2:"Fruit",3:"Meat",4:"Seafood",5:"Poultry",
-    6:"Dairy",7:"Egg",8:"Grain",9:"Legume"
-  };
-  
-  // ใช้เสมอเวลาจะ “ได้เลข” หรือ “ไม่มี ingredient_names”
-// eslint-disable-next-line react-hooks/exhaustive-deps
+// ✅ Move helper function OUTSIDE component to prevent recreating on every render
 const normalizeIngredientTags = (p: ApiPost): string[] => {
-  // 1) ถ้า API/createdPayload มีชื่อมาแล้ว ใช้อันนี้
   if (Array.isArray(p.ingredient_names) && p.ingredient_names.length) {
     return Array.from(new Set(p.ingredient_names.filter(Boolean)));
   }
 
   const raw = p.ingredients_tags ?? [];
-
-  // 2) ถ้าเป็น array ของ number (หรือ string ของตัวเลข) → map id -> name
   const asArray = Array.isArray(raw) ? raw : [];
   const numericIds = asArray
     .map((v) => {
@@ -179,34 +172,56 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
 
   if (numericIds.length > 0) {
     const names = Array.from(
-      new Set(
-        numericIds
-          .map((id) => INGREDIENT_ID_TO_NAME[id])
-          .filter(Boolean)
-      )
+      new Set(numericIds.map((id) => INGREDIENT_ID_TO_NAME[id]).filter(Boolean))
     );
     return names;
   }
   const namesFromStrings = Array.from(
-    new Set(
-      asArray
-        .map((v) => String(v).trim())
-        .filter(Boolean)
-    )
+    new Set(asArray.map((v) => String(v).trim()).filter(Boolean))
   );
   return namesFromStrings;
 };
-useEffect(() => {
-  let cancelled = false;
 
-  const fetchRecipes = async () => {
-    try {
-      const endpoint = q
-        ? `${API}/searchpost/${encodeURIComponent(q)}`
-        : `${API}/getallpost`;
+// ✅ Move helper functions outside
+const minutesFrom = (cookTime: string) => {
+  const m = cookTime.match(/\d+/);
+  return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
+};
 
-      const res = await fetch(endpoint, { cache: "no-store" });
-      const raw = (await res.json()) as unknown;
+const textIncludesAny = (text: string, words: string[]) => {
+  const low = text.toLowerCase();
+  return words.some((w) => low.includes(w.toLowerCase()));
+};
+
+const ingredientsIncludeAny = (ings: string[], words: string[]) =>
+  ings.some((i) => textIncludesAny(i, words));
+
+export default function SearchPage() {
+  const searchParams = useSearchParams();
+  const q = (searchParams.get("q") || "").trim();
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showIngredientInput, setShowIngredientInput] = useState(false);
+  const [newIngredient, setNewIngredient] = useState("");
+  const API = process.env.NEXT_PUBLIC_API_BASE!;
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ Fetch recipes - removed normalizeIngredientTags from dependencies
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRecipes = async () => {
+      try {
+        const endpoint = q
+          ? `${API}/searchpost/${encodeURIComponent(q)}`
+          : `${API}/getallpost`;
+
+        const res = await fetch(endpoint, { cache: "no-store" });
+        const raw = (await res.json()) as unknown;
 
         let items: Array<ApiPost | ApiEnvelope> = [];
         if (Array.isArray(raw)) {
@@ -220,17 +235,24 @@ useEffect(() => {
         const posts: ApiPost[] = items.map((it: ApiItem) =>
           isEnvelope(it) ? it.post! : it
         );
-        
+
         // map --> Recipe
         const mapped: Recipe[] = posts.map((p, idx) => {
           const catSlugs: CategorySlug[] = (p.categories_tags ?? [])
-            .map((v) => (typeof v === "number" ? CATEGORY_ID_TO_SLUG[v] : labelToSlug(String(v))))
+            .map((v) =>
+              typeof v === "number"
+                ? CATEGORY_ID_TO_SLUG[v]
+                : labelToSlug(String(v))
+            )
             .filter(Boolean) as CategorySlug[];
-        
+
           const ingTags: string[] = normalizeIngredientTags(p);
-        
-          const safeId = p.post_id != null && p.post_id !== "" ? String(p.post_id) : `tmp-${Date.now()}-${idx}`;
-        
+
+          const safeId =
+            p.post_id != null && p.post_id !== ""
+              ? String(p.post_id)
+              : `tmp-${Date.now()}-${idx}`;
+
           return {
             id: safeId,
             title: p.menu_name || p.title || "Untitled",
@@ -243,7 +265,7 @@ useEffect(() => {
             servings: 1,
             categories: catSlugs,
             ingredients: p.ingredients ?? [],
-            ingredientsTags: ingTags,              
+            ingredientsTags: ingTags,
             instructions: p.instructions ?? [],
             createdAt: "วันนี้",
             comments: [],
@@ -265,20 +287,22 @@ useEffect(() => {
       const evt = e as CustomEvent<ApiPost>;
       const detail = evt.detail;
       if (!detail) return;
-    
+
       const catSlugs: CategorySlug[] = (detail.categories_tags ?? [])
         .map((v) =>
-          typeof v === "number" ? CATEGORY_ID_TO_SLUG[v] : labelToSlug(String(v))
+          typeof v === "number"
+            ? CATEGORY_ID_TO_SLUG[v]
+            : labelToSlug(String(v))
         )
         .filter(Boolean) as CategorySlug[];
-    
-      const ingTags: string[] = normalizeIngredientTags(detail); // ✅ เห็นแน่ เพราะย้ายออกมาแล้ว
-    
+
+      const ingTags: string[] = normalizeIngredientTags(detail);
+
       const safeId =
         detail.post_id != null && detail.post_id !== ""
           ? String(detail.post_id)
           : `tmp-${Date.now()}`;
-    
+
       const newItem: Recipe = {
         id: safeId,
         title: detail.menu_name || detail.title || "Untitled",
@@ -291,133 +315,129 @@ useEffect(() => {
         servings: 1,
         categories: catSlugs,
         ingredients: detail.ingredients ?? [],
-        ingredientsTags: ingTags, // ✅ ชื่อแทนเลข
+        ingredientsTags: ingTags,
         instructions: detail.instructions ?? [],
         createdAt: "วันนี้",
         comments: [],
       };
-    
+
       setRecipes((prev) => [newItem, ...prev]);
     };
-    
+
     window.addEventListener("recipe:created", onCreated as EventListener);
 
     return () => {
       cancelled = true;
       window.removeEventListener("recipe:created", onCreated as EventListener);
     };
-  }, [API, normalizeIngredientTags,q]);
+  }, [API, q]); // ✅ Removed normalizeIngredientTags dependency
 
-  // วางไว้บนสุดของไฟล์ (เหนือ filteredRecipes)
-  const minutesFrom = (cookTime: string) => {
-    // รองรับ "30 นาที", "15 min", "8mins", "12" เป็นต้น
-    const m = cookTime.match(/\d+/);
-    return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
-  };
+  // ✅ Memoize category predicates
+  const categoryPredicates: Record<string, (r: Recipe) => boolean> = useMemo(
+    () => ({
+      "one-dish": (r) => (r.categories ?? []).includes("one-dish"),
 
-  const textIncludesAny = (text: string, words: string[]) => {
-    const low = text.toLowerCase();
-    return words.some((w) => low.includes(w.toLowerCase()));
-  };
+      spicy: (r) =>
+        (r.categories ?? []).includes("spicy") ||
+        textIncludesAny(r.title + " " + r.description, [
+          "spicy",
+          "เผ็ด",
+          "chili",
+          "พริก",
+        ]) ||
+        ingredientsIncludeAny(r.ingredients, ["chili", "พริก"]),
 
-  const ingredientsIncludeAny = (ings: string[], words: string[]) =>
-    ings.some((i) => textIncludesAny(i, words));
+      quick: (r) => minutesFrom(r.cookTime) <= 15,
 
-  // mapping predicate ต่อ category id
-  // mapping predicate ต่อ category id
-  const categoryPredicates: Record<string, (r: Recipe) => boolean> = {
-    "one-dish": (r) => (r.categories ?? []).includes("one-dish"),
+      vegetarian: (r) =>
+        (r.categories ?? []).includes("vegetarian") ||
+        !ingredientsIncludeAny(r.ingredients, [
+          "หมู",
+          "ไก่",
+          "เนื้อ",
+          "กุ้ง",
+          "ปลา",
+          "beef",
+          "pork",
+          "chicken",
+          "shrimp",
+          "fish",
+        ]),
 
-    spicy: (r) =>
-      (r.categories ?? []).includes("spicy") ||
-      textIncludesAny(r.title + " " + r.description, [
-        "spicy",
-        "เผ็ด",
-        "chili",
-        "พริก",
-      ]) ||
-      ingredientsIncludeAny(r.ingredients, ["chili", "พริก"]),
+      healthy: (r) =>
+        (r.categories ?? []).includes("healthy") ||
+        textIncludesAny(r.description, [
+          "healthy",
+          "low fat",
+          "low sugar",
+          "คาลอรีต่ำ",
+        ]),
 
-    quick: (r) => minutesFrom(r.cookTime) <= 15,
+      drinks: (r) => (r.categories ?? []).includes("drinks"),
 
-    vegetarian: (r) =>
-      (r.categories ?? []).includes("vegetarian") ||
-      !ingredientsIncludeAny(r.ingredients, [
-        "หมู",
-        "ไก่",
-        "เนื้อ",
-        "กุ้ง",
-        "ปลา",
-        "beef",
-        "pork",
-        "chicken",
-        "shrimp",
-        "fish",
-      ]),
+      snacks: (r) => (r.categories ?? []).includes("snacks"),
 
-    healthy: (r) =>
-      (r.categories ?? []).includes("healthy") ||
-      textIncludesAny(r.description, [
-        "healthy",
-        "low fat",
-        "low sugar",
-        "คาลอรีต่ำ",
-      ]),
+      dessert: (r) => (r.categories ?? []).includes("dessert"),
 
-    drinks: (r) => (r.categories ?? []).includes("drinks"),
+      halal: (r) => (r.categories ?? []).includes("halal"),
 
-    snacks: (r) => (r.categories ?? []).includes("snacks"),
+      seafood: (r) =>
+        (r.categories ?? []).includes("seafood") ||
+        ingredientsIncludeAny(r.ingredients, [
+          "shrimp",
+          "fish",
+          "กุ้ง",
+          "ปลา",
+          "ปลาหมึก",
+        ]),
 
-    dessert: (r) => (r.categories ?? []).includes("dessert"),
+      noodles: (r) =>
+        (r.categories ?? []).includes("noodles") ||
+        textIncludesAny(r.title + " " + r.description, [
+          "noodle",
+          "เส้น",
+          "ผัด",
+        ]),
+    }),
+    []
+  );
 
-    halal: (r) => (r.categories ?? []).includes("halal"),
+  // ✅ Memoize filtered recipes - only recalculate when dependencies change
+  const filteredRecipes = useMemo(() => {
+    return recipes.filter((recipe) => {
+      // Search by name
+      const matchesSearch =
+        !searchTerm ||
+        recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        recipe.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    seafood: (r) =>
-      (r.categories ?? []).includes("seafood") ||
-      ingredientsIncludeAny(r.ingredients, [
-        "shrimp",
-        "fish",
-        "กุ้ง",
-        "ปลา",
-        "ปลาหมึก",
-      ]),
+      // Filter by ingredients
+      const matchesIngredients =
+        selectedIngredients.length === 0 ||
+        selectedIngredients.every((kw) => {
+          const kwLow = kw.toLowerCase();
+          const tags = (recipe.ingredientsTags ?? []).map((t) =>
+            String(t).toLowerCase()
+          );
+          const ings = (recipe.ingredients ?? []).map((i) => i.toLowerCase());
 
-    noodles: (r) =>
-      (r.categories ?? []).includes("noodles") ||
-      textIncludesAny(r.title + " " + r.description, ["noodle", "เส้น", "ผัด"]),
-  };
+          return (
+            tags.some((t) => t.includes(kwLow)) ||
+            ings.some((i) => i.includes(kwLow))
+          );
+        });
 
-  // Filter recipes based on search criteria
-  const filteredRecipes = recipes.filter((recipe) => {
-    // Search by name
-    const matchesSearch =
-      !searchTerm ||
-      recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      recipe.description.toLowerCase().includes(searchTerm.toLowerCase());
+      // Filter by categories
+      const matchesCategories =
+        selectedCategories.length === 0 ||
+        selectedCategories.every((catId) => {
+          const predicate = categoryPredicates[catId];
+          return predicate ? predicate(recipe) : true;
+        });
 
-    // Filter by ingredients
-    const matchesIngredients =
-    selectedIngredients.length === 0 ||
-    selectedIngredients.every((kw) => {
-      const kwLow = kw.toLowerCase();
-      const tags = (recipe.ingredientsTags ?? []).map((t) =>
-        String(t).toLowerCase()
-      );
-      const ings = (recipe.ingredients ?? []).map((i) => i.toLowerCase());
-  
-      return tags.some((t) => t.includes(kwLow)) || ings.some((i) => i.includes(kwLow));
+      return matchesSearch && matchesIngredients && matchesCategories;
     });
-
-    // Filter by categories (simplified - you can expand this logic)
-    const matchesCategories =
-      selectedCategories.length === 0 ||
-      selectedCategories.every((catId) => {
-        const predicate = categoryPredicates[catId];
-        return predicate ? predicate(recipe) : true;
-      });
-
-    return matchesSearch && matchesIngredients && matchesCategories;
-  });
+  }, [recipes, searchTerm, selectedIngredients, selectedCategories, categoryPredicates]);
 
   const addIngredient = (ingredient: string) => {
     if (ingredient && !selectedIngredients.includes(ingredient)) {
@@ -428,12 +448,16 @@ useEffect(() => {
   };
 
   const removeIngredient = (ingredient: string) => {
-    setSelectedIngredients(selectedIngredients.filter((i) => i !== ingredient));
+    setSelectedIngredients(
+      selectedIngredients.filter((i) => i !== ingredient)
+    );
   };
 
   const toggleCategory = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
-      setSelectedCategories(selectedCategories.filter((c) => c !== categoryId));
+      setSelectedCategories(
+        selectedCategories.filter((c) => c !== categoryId)
+      );
     } else {
       setSelectedCategories([...selectedCategories, categoryId]);
     }
@@ -449,9 +473,9 @@ useEffect(() => {
     <>
       <HeroHeader2 />
 
-      <div className=" relative pt-20 bg-muted overflow-x-hidden">
+      <div className="relative pt-20 bg-muted overflow-x-hidden">
         {/* Filters */}
-        <div className=" bg-white mx-4 my-4 rounded-xl shadow-sm p-6 max-w-6xl xl:mx-auto">
+        <div className="bg-white mx-4 my-4 rounded-xl shadow-sm p-6 max-w-6xl xl:mx-auto">
           {/* Ingredient Filter */}
           <div className="mb-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -611,10 +635,12 @@ useEffect(() => {
                       className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                     >
                       <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={recipe.image}
                           alt={recipe.title}
                           className="w-full h-60 object-cover"
+                          loading="lazy"
                         />
                         <div className="absolute top-3 right-3 bg-yellow-500 text-white px-2 py-1 rounded-lg flex items-center space-x-1">
                           <span className="font-bold">
@@ -643,7 +669,7 @@ useEffect(() => {
                                 {t}
                               </span>
                             ))}
-                           
+
                             {recipe.ingredientsTags!.length > 3 && (
                               <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-xs">
                                 +{recipe.ingredientsTags!.length - 3}
