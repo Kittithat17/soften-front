@@ -27,6 +27,7 @@ import { HeroHeader2 } from "./hero8-head2";
 import { User } from "@/types/user";
 import { useAuth } from "@/app/context/AuthContext";
 import type { User as AppUser } from "@/types/user";
+import { toast } from "sonner";
 
 /** ---------- Local types (เข้มงวด, ไม่ใช้ any) ---------- */
 type CategorySlug =
@@ -53,6 +54,7 @@ interface ApiPost {
   ingredient_names?: string[];
   ingredients?: Array<string | number>;
   instructions?: Array<string | number>;
+  star?: number;
 }
 
 interface ApiOwner {
@@ -151,6 +153,39 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
   return Array.from(new Set(namesFromStrings));
 };
 
+function buildRecipeFromApi(p: ApiPost, u: ApiOwner | undefined): Recipe {
+  const catSlugs: CategorySlug[] = (
+    Array.isArray(p.categories_tags) ? p.categories_tags : []
+  )
+    .map((v: number | string) =>
+      typeof v === "number" ? CATEGORY_ID_TO_SLUG[v] : labelToSlug(String(v))
+    )
+    .filter(Boolean) as CategorySlug[];
+
+  return {
+    id: String(p.post_id),
+    title: p.menu_name ?? "Untitled",
+    description: p.story ?? "",
+    image: p.image_url ?? "/default-image.png",
+    author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
+    rating: typeof p.star === "number" ? p.star : 0,  // ⭐ ดึงจาก BE
+    totalRatings: 0,
+    cookTime: "30 mins",
+    servings: 1,
+    categories: catSlugs,
+    ingredients: Array.isArray(p.ingredients)
+      ? p.ingredients.map(String)
+      : [],
+    ingredientsTags: normalizeIngredientTags(p),
+    instructions: Array.isArray(p.instructions)
+      ? p.instructions.map(String)
+      : [],
+    createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
+    comments: [],
+  };
+}
+
+
 type JwtPayload = {
   user_id?: number | string;
   id?: number | string;
@@ -192,6 +227,7 @@ function getCurrentUserId(
 
 export default function RecipeDetailPage() {
   const { user: authUser, token } = useAuth();
+  const API = process.env.NEXT_PUBLIC_API_BASE!;
   const myUserId = useMemo(
     () => getCurrentUserId(authUser, token),
     [authUser, token]
@@ -211,6 +247,25 @@ export default function RecipeDetailPage() {
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const reloadRecipe = async (postId: string) => {
+    try {
+      const res = await fetch(`${API}/getpostbypostid/${postId}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+  
+      const data = await res.json();
+      const p: ApiPost = data.post;
+      const u: ApiOwner | undefined = data.owner_post;
+      if (!p) return;
+  
+      const mapped = buildRecipeFromApi(p, u);
+      setRecipe(mapped);
+    } catch (err) {
+      console.error("Failed to reload recipe after rating:", err);
+    }
+  };
+  
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
@@ -225,37 +280,7 @@ export default function RecipeDetailPage() {
         const u = data.owner_post;
         if (!p) throw new Error("No recipe found");
 
-        const catSlugs: CategorySlug[] = (
-          Array.isArray(p.categories_tags) ? p.categories_tags : []
-        )
-          .map((v: number | string) =>
-            typeof v === "number"
-              ? CATEGORY_ID_TO_SLUG[v]
-              : labelToSlug(String(v))
-          )
-          .filter(Boolean) as CategorySlug[];
-
-        const mapped: Recipe = {
-          id: String(p.post_id),
-          title: p.menu_name ?? "Untitled",
-          description: p.story ?? "",
-          image: p.image_url ?? "/default-image.png",
-          author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
-          rating: 4.5,
-          totalRatings: 0,
-          cookTime: "30 นาที",
-          servings: 1,
-          categories: catSlugs,
-          ingredients: Array.isArray(p.ingredients)
-            ? p.ingredients.map(String)
-            : [],
-          ingredientsTags: normalizeIngredientTags(p),
-          instructions: Array.isArray(p.instructions)
-            ? p.instructions.map(String)
-            : [],
-          createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
-          comments: [],
-        };
+        const mapped = buildRecipeFromApi(p, u);
 
         setRecipe(mapped);
 
@@ -290,7 +315,7 @@ export default function RecipeDetailPage() {
 
   const toggleFavorite = async () => {
     if (!token) {
-      alert("Please login to save posts");
+      toast.error("Please login to save posts");
       return;
     }
 
@@ -327,7 +352,7 @@ export default function RecipeDetailPage() {
       }
     } catch (error) {
       console.error("Failed to toggle favorite:", error);
-      alert("Failed to save post. Please try again.");
+      toast.error("Failed to save post. Please try again.");
     } finally {
       setFavoriteLoading(false);
     }
@@ -356,9 +381,43 @@ export default function RecipeDetailPage() {
     );
   }
 
-  const handleRating = (rating: number) => {
+  const handleRating = async (rating: number) => {
+    if (!token) {
+      toast.error("Please login to rate this recipe");
+      return;
+    }
+    if (!recipe) return;
+  
     setUserRating(rating);
+  
+    try {
+      const form = new FormData();
+      form.append("post_id", recipe.id);
+      form.append("rate", String(rating));
+  
+      const res = await fetch(`${API}/api/ratepost`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+  
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("RatePost failed:", data);
+        alert(data.message || "Failed to submit rating");
+        return;
+      }
+  
+      // ✅ ยิงสำเร็จแล้ว → reload post เพื่อดึง avg rating ล่าสุดจาก DB
+      await reloadRecipe(recipe.id);
+    } catch (err) {
+      console.error("Error while rating:", err);
+      alert("Something went wrong while rating. Please try again.");
+    }
   };
+  
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

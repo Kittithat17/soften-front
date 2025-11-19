@@ -639,7 +639,7 @@ export default function PostRecipeForm({
         </span>
       ))}
       {!ingredientTags.length && (
-        <span className="text-xs text-gray-400">ยังไม่มีแท็ก</span>
+        <span className="text-xs text-gray-400">No tag yet</span>
       )}
     </div>
   </div>
@@ -677,7 +677,7 @@ export default function PostRecipeForm({
                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Add Step
+                Add Instruction
               </button>
             </div>
 

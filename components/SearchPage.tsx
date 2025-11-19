@@ -50,6 +50,7 @@ interface ApiPost {
   ingredient_names?: string[];
   ingredients?: string[];
   instructions?: string[];
+  star?: number;
 }
 
 interface ApiOwner {
@@ -259,7 +260,7 @@ export default function SearchPage() {
             description: p.story || p.Details || "",
             image: p.image_url || "/default-image.png",
             author: { id: 0, username: "Unknown" },
-            rating: 4.5,
+            rating: typeof p.star === "number" ? p.star : 0,
             totalRatings: 0,
             cookTime: "30 นาที",
             servings: 1,
@@ -309,9 +310,9 @@ export default function SearchPage() {
         description: detail.story || detail.Details || "",
         image: detail.image_url || "/default-image.png",
         author: { id: 0, username: "Unknown" },
-        rating: 4.5,
+        rating: typeof detail.star === "number" ? detail.star : 0,
         totalRatings: 0,
-        cookTime: "30 นาที",
+        cookTime: "30 mins",
         servings: 1,
         categories: catSlugs,
         ingredients: detail.ingredients ?? [],
@@ -398,6 +399,12 @@ export default function SearchPage() {
           "เส้น",
           "ผัด",
         ]),
+        rice: (r) =>
+          (r.categories ?? []).includes("rice") ||
+          textIncludesAny(r.title + " " + r.description, ["rice", "ข้าว"]) ||
+          ingredientsIncludeAny(r.ingredients, ["rice", "ข้าว"]),
+
+
     }),
     []
   );
