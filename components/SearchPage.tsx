@@ -704,7 +704,7 @@ export default function SearchPage() {
 
                         <Link
                           href={`/Menu/${recipe.id}`}
-                          className="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-yellow-500 py-3 font-medium transition-colors hover:bg-yellow-600"
+                          className="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-yellow-500 py-3 font-medium transition-colors hover:bg-yellow-600 text-black"
                         >
                           <Eye />
                           View Recipes

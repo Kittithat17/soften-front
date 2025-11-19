@@ -168,14 +168,12 @@ function buildRecipeFromApi(p: ApiPost, u: ApiOwner | undefined): Recipe {
     description: p.story ?? "",
     image: p.image_url ?? "/default-image.png",
     author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
-    rating: typeof p.star === "number" ? p.star : 0,  // ⭐ ดึงจาก BE
+    rating: typeof p.star === "number" ? p.star : 0, // ⭐ ดึงจาก BE
     totalRatings: 0,
     cookTime: "30 mins",
     servings: 1,
     categories: catSlugs,
-    ingredients: Array.isArray(p.ingredients)
-      ? p.ingredients.map(String)
-      : [],
+    ingredients: Array.isArray(p.ingredients) ? p.ingredients.map(String) : [],
     ingredientsTags: normalizeIngredientTags(p),
     instructions: Array.isArray(p.instructions)
       ? p.instructions.map(String)
@@ -184,7 +182,6 @@ function buildRecipeFromApi(p: ApiPost, u: ApiOwner | undefined): Recipe {
     comments: [],
   };
 }
-
 
 type JwtPayload = {
   user_id?: number | string;
@@ -253,19 +250,19 @@ export default function RecipeDetailPage() {
         cache: "no-store",
       });
       if (!res.ok) return;
-  
+
       const data = await res.json();
       const p: ApiPost = data.post;
       const u: ApiOwner | undefined = data.owner_post;
       if (!p) return;
-  
+
       const mapped = buildRecipeFromApi(p, u);
       setRecipe(mapped);
     } catch (err) {
       console.error("Failed to reload recipe after rating:", err);
     }
   };
-  
+
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
@@ -387,14 +384,14 @@ export default function RecipeDetailPage() {
       return;
     }
     if (!recipe) return;
-  
+
     setUserRating(rating);
-  
+
     try {
       const form = new FormData();
       form.append("post_id", recipe.id);
       form.append("rate", String(rating));
-  
+
       const res = await fetch(`${API}/api/ratepost`, {
         method: "POST",
         headers: {
@@ -402,14 +399,14 @@ export default function RecipeDetailPage() {
         },
         body: form,
       });
-  
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         console.error("RatePost failed:", data);
         toast.error(data.message || "Failed to submit rating");
         return;
       }
-  
+
       // ✅ ยิงสำเร็จแล้ว → reload post เพื่อดึง avg rating ล่าสุดจาก DB
       await reloadRecipe(recipe.id);
     } catch (err) {
@@ -417,7 +414,6 @@ export default function RecipeDetailPage() {
       toast.error("Something went wrong while rating. Please try again.");
     }
   };
-  
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -433,7 +429,7 @@ export default function RecipeDetailPage() {
     myUserId != null && Number(recipe.author.id) === myUserId
       ? "/profile"
       : `/userprofile/${recipe.author.username}`;
-    console.log("author info : "+ recipe.author);
+  console.log("author info : " + recipe.author);
   return (
     <>
       <HeroHeader2 />
@@ -468,7 +464,9 @@ export default function RecipeDetailPage() {
               } ${favoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               aria-label={isFavorited ? "Unfavorite" : "Favorite"}
             >
-              <Heart className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`} />
+              <Heart
+                className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`}
+              />
             </button>
           </div>
 
@@ -484,7 +482,7 @@ export default function RecipeDetailPage() {
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
-            <p className="text-gray-600 mb-4">{recipe.description}</p>
+            <p className="text-gray-600 dark:text-amber-50 mb-4">{recipe.description}</p>
 
             {/* Ingredient Tags */}
             {(recipe.ingredientsTags?.length ?? 0) > 0 && (
@@ -521,7 +519,7 @@ export default function RecipeDetailPage() {
                   );
                 })}
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 md:flex md:items-center md:gap-6">
+              <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 dark:text-white md:flex md:items-center md:gap-6">
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" /> {recipe.cookTime}
                 </span>
@@ -543,11 +541,18 @@ export default function RecipeDetailPage() {
             <CardTitle>Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc pl-6 space-y-1">
+          <div className="space-y-4">
               {recipe.ingredients.map((ing, idx) => (
-                <li key={idx}>{ing}</li>
+                <div key={idx} className="flex space-x-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className=" leading-relaxed">{ing}</p>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </CardContent>
         </Card>
 
@@ -564,7 +569,7 @@ export default function RecipeDetailPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className=" leading-relaxed">
                       {instruction}
                     </p>
                   </div>

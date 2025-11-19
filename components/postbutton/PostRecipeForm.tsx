@@ -22,12 +22,33 @@ interface PostRecipeFormProps {
   onClose: () => void;
 }
 const INGREDIENT_NAME_TO_ID: Record<string, number> = {
-    // master
-    vegetable: 1, fruit: 2, meat: 3, seafood: 4, poultry: 5, dairy: 6, egg: 7, grain: 8, legume: 9,
-    pork: 3, beef: 3, chicken: 5, shrimp: 4, fish: 4,
-    eggs: 7, garlic: 1, chilies: 1, chilli: 1, chili: 1,
-    rice: 8, vegetables: 1, fruits: 2, beans: 9, bean: 9, milk: 6,
-  };
+  // master
+  vegetable: 1,
+  fruit: 2,
+  meat: 3,
+  seafood: 4,
+  poultry: 5,
+  dairy: 6,
+  egg: 7,
+  grain: 8,
+  legume: 9,
+  pork: 3,
+  beef: 3,
+  chicken: 5,
+  shrimp: 4,
+  fish: 4,
+  eggs: 7,
+  garlic: 1,
+  chilies: 1,
+  chilli: 1,
+  chili: 1,
+  rice: 8,
+  vegetables: 1,
+  fruits: 2,
+  beans: 9,
+  bean: 9,
+  milk: 6,
+};
 const SUGGESTED_ING_TAGS = [
   "Pork",
   "Rice",
@@ -74,20 +95,20 @@ const CATEGORY_ID_MAP: Record<CategoryTag, number> = {
   Rice: 12,
 };
 const CATEGORY_ID_TO_NAME: Record<number, CategoryTag> = Object.fromEntries(
-    Object.entries(CATEGORY_ID_MAP).map(([name, id]) => [id, name as CategoryTag])
-  ) as Record<number, CategoryTag>;
-  
-  const INGREDIENT_ID_TO_NAME: Record<number, string> = {
-    1: "Vegetable",
-    2: "Fruit",
-    3: "Meat",
-    4: "Seafood",
-    5: "Poultry",
-    6: "Dairy",
-    7: "Egg",
-    8: "Grain",
-    9: "Legume",
-  };
+  Object.entries(CATEGORY_ID_MAP).map(([name, id]) => [id, name as CategoryTag])
+) as Record<number, CategoryTag>;
+
+const INGREDIENT_ID_TO_NAME: Record<number, string> = {
+  1: "Vegetable",
+  2: "Fruit",
+  3: "Meat",
+  4: "Seafood",
+  5: "Poultry",
+  6: "Dairy",
+  7: "Egg",
+  8: "Grain",
+  9: "Legume",
+};
 
 export default function PostRecipeForm({
   isOpen,
@@ -166,15 +187,16 @@ export default function PostRecipeForm({
   };
 
   const removeImage = () => setFormData((p) => ({ ...p, image: null }));
-  const ingredientNamesForPreview = Array.from(new Set(
-    ingredientTags
-      .map(t => INGREDIENT_NAME_TO_ID[t.toLowerCase()])
-      .filter((id): id is number => typeof id === "number")
-  )).map(id => INGREDIENT_ID_TO_NAME[id]);
-  
+  const ingredientNamesForPreview = Array.from(
+    new Set(
+      ingredientTags
+        .map((t) => INGREDIENT_NAME_TO_ID[t.toLowerCase()])
+        .filter((id): id is number => typeof id === "number")
+    )
+  ).map((id) => INGREDIENT_ID_TO_NAME[id]);
+
   // ------- Submit -------
   const handleSubmit = async (e?: React.FormEvent) => {
-    
     if (e) e.preventDefault();
     if (formData.categories.length === 0) {
       return toast.error("Please select at least one category");
@@ -190,16 +212,17 @@ export default function PostRecipeForm({
     if (!cleanedIngredients.length || !cleanedInstructions.length)
       return toast.error("Please enter ingredients and instructions");
 
-    
     const ingredientTagIdsRaw = ingredientTags
-    .map(t => INGREDIENT_NAME_TO_ID[t.toLowerCase()])
-    .filter((id): id is number => typeof id === "number");
+      .map((t) => INGREDIENT_NAME_TO_ID[t.toLowerCase()])
+      .filter((id): id is number => typeof id === "number");
 
     const ingredientTagIds = Array.from(new Set(ingredientTagIdsRaw));
-    const ingredientNames  = ingredientTagIds.map(id => INGREDIENT_ID_TO_NAME[id]);
-    
+    const ingredientNames = ingredientTagIds.map(
+      (id) => INGREDIENT_ID_TO_NAME[id]
+    );
+
     const categoryIds = formData.categories.map((c) => CATEGORY_ID_MAP[c]);
-    
+
     const body = new FormData();
     body.append("menu_name", formData.title);
     body.append("Details", formData.description.trim());
@@ -231,9 +254,9 @@ export default function PostRecipeForm({
         menu_name: formData.title,
         Details: formData.description.trim(),
         image_url: data?.post?.image_url ?? data?.image_url ?? "",
-        categories_tags: categoryIds,           // number[]
-        ingredients_tags: ingredientTagIds, 
-        ingredient_names: ingredientNames,    // ⬅️ เปลี่ยนมาเป็น number[]
+        categories_tags: categoryIds, // number[]
+        ingredients_tags: ingredientTagIds,
+        ingredient_names: ingredientNames, // ⬅️ เปลี่ยนมาเป็น number[]
         ingredients: cleanedIngredients,
         instructions: cleanedInstructions,
       };
@@ -380,8 +403,10 @@ export default function PostRecipeForm({
               preview
             </div>
 
-            <PreviewRecipeCard {...preview} ingredientNames={ingredientNamesForPreview} />
-
+            <PreviewRecipeCard
+              {...preview}
+              ingredientNames={ingredientNamesForPreview}
+            />
 
             <div className="flex space-x-4 pt-6">
               <button
@@ -389,7 +414,7 @@ export default function PostRecipeForm({
                 onClick={() => setIsPreviewMode(false)}
                 className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                แก้ไข
+                Edit
               </button>
               <button
                 type="button"
@@ -476,7 +501,7 @@ export default function PostRecipeForm({
                       onClick={removeImage}
                       className="px-3 py-1.5 border rounded-lg text-sm text-red-500 hover:bg-red-50"
                     >
-                      ลบรูป
+                      Remove
                     </button>
                   </div>
                 </div>
@@ -495,14 +520,14 @@ export default function PostRecipeForm({
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, title: e.target.value }))
                 }
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                className="w-full p-3 border rounded-lg  outline-none text-black  focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
                 placeholder="ex. Tom yum kung"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2 ">
                 Description *
               </label>
               <textarea
@@ -511,7 +536,7 @@ export default function PostRecipeForm({
                   setFormData((p) => ({ ...p, description: e.target.value }))
                 }
                 rows={3}
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                className="w-full p-3 border text-black rounded-lg outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
                 placeholder="Tell us about this recipe..."
               />
             </div>
@@ -550,99 +575,107 @@ export default function PostRecipeForm({
             </div>
 
             {/* Ingredients (In details) */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      Ingredients (In details) <span className="ml-1 text-gray-400">!</span>
-    </label>
-    {/* ช่องกรอกรายการวัตถุดิบทีละบรรทัด */}
-    {formData.ingredients.map((ing, i) => (
-      <div key={i} className="flex gap-2 mb-2">
-        <input
-          value={ing}
-          onChange={(e) => updateIngredient(i, e.target.value)}
-          className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
-          placeholder={`${i + 1}.`}
-        />
-        {formData.ingredients.length > 1 && (
-          <button
-            type="button"
-            onClick={() => removeIngredient(i)}
-            className="px-3 py-3 text-red-500 hover:bg-red-50 rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-    ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ingredients (In details){" "}
+                <span className="ml-1 text-gray-400">!</span>
+              </label>
+              {/* ช่องกรอกรายการวัตถุดิบทีละบรรทัด */}
+              {formData.ingredients.map((ing, i) => (
+                <div key={i} className="flex gap-2 mb-2 text-black">
+                  <input
+                    value={ing}
+                    onChange={(e) => updateIngredient(i, e.target.value)}
+                    className="flex-1 p-3  border rounded-lg outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
+                    placeholder={`${i + 1}.`}
+                  />
+                  {formData.ingredients.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(i)}
+                      className="px-3 py-3 text-red-500 hover:bg-red-50 rounded-lg"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              ))}
 
-    <button
-      type="button"
-      onClick={addIngredient}
-      className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
-    >
-      <Plus className="w-4 h-4" /> Add Ingredient
-    </button>
-  </div>
+              <button
+                type="button"
+                onClick={addIngredient}
+                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 text-black"
+              >
+                <Plus className="w-4 h-4" /> Add Ingredient
+              </button>
+            </div>
 
             {/* Main Ingredients Tag */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      Main Ingredients (Tag) <span className="ml-1 text-gray-400">!</span>
-    </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Main Ingredients (Tag){" "}
+                <span className="ml-1 text-gray-400">!</span>
+              </label>
 
-    {/* ช่องพิมพ์ + ปุ่ม + */}
-    <div className="flex gap-2 mb-2">
-      <input
-        value={ingredientTagInput}
-        onChange={(e) => setIngredientTagInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); addIngredientTag(); }
-        }}
-        placeholder="Type your main ingredients here..."
-        className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
-      />
-      <button
-        type="button"
-        onClick={() => addIngredientTag()}
-        className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50"
-        title="Add tag"
-      >
-        +
-      </button>
-    </div>
+              {/* ช่องพิมพ์ + ปุ่ม + */}
+              <div className="flex gap-2 mb-2 text-black ">
+                <input
+                  value={ingredientTagInput}
+                  onChange={(e) => setIngredientTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addIngredientTag();
+                    }
+                  }}
+                  placeholder="Type your main ingredients here..."
+                  className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => addIngredientTag()}
+                  className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50"
+                  title="Add tag"
+                >
+                  +
+                </button>
+              </div>
 
-    {/* ปุ่ม + ชุดใหญ่เหมือนในภาพ (quick chips) */}
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
-      {SUGGESTED_ING_TAGS.map((t) => (
-        <button
-          type="button"
-          key={t}
-          onClick={() => addIngredientTag(t)}
-          className="px-3 py-2 bg-yellow-200 text-yellow-800 rounded-lg text-sm hover:bg-yellow-300 transition-colors"
-        >
-          {t}
-        </button>
-      ))}
-    </div>
+              {/* ปุ่ม + ชุดใหญ่เหมือนในภาพ (quick chips) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
+                {SUGGESTED_ING_TAGS.map((t) => (
+                  <button
+                    type="button"
+                    key={t}
+                    onClick={() => addIngredientTag(t)}
+                    className="px-3 py-2 bg-yellow-200 text-yellow-800 rounded-lg text-sm hover:bg-yellow-300 transition-colors"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
 
-    {/* แสดงแท็กที่เลือกแล้ว (ลบได้) */}
-    <div className="flex flex-wrap gap-2">
-      {ingredientTags.map((t) => (
-        <span
-          key={t}
-          className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-        >
-          {t}
-          <button onClick={() => removeIngredientTag(t)} className="hover:text-yellow-900">
-            <X className="h-3 w-3" />
-          </button>
-        </span>
-      ))}
-      {!ingredientTags.length && (
-        <span className="text-xs text-gray-400">No tag yet</span>
-      )}
-    </div>
-  </div>
+              {/* แสดงแท็กที่เลือกแล้ว (ลบได้) */}
+              <div className="flex flex-wrap gap-2">
+                {ingredientTags.map((t) => (
+                  <span
+                    key={t}
+                    className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                  >
+                    {t}
+                    <button
+                      onClick={() => removeIngredientTag(t)}
+                      className="hover:text-yellow-900"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {!ingredientTags.length && (
+                  <span className="text-xs text-gray-400">No tag yet</span>
+                )}
+              </div>
+            </div>
 
             {/* Instructions */}
             <div>
@@ -651,12 +684,12 @@ export default function PostRecipeForm({
                 {formData.instructions.filter((i) => i.trim()).length})
               </label>
               {formData.instructions.map((ins, i) => (
-                <div key={i} className="flex gap-2 mb-2">
+                <div key={i} className="flex gap-2 mb-2 text-black">
                   <textarea
                     value={ins}
                     onChange={(e) => updateInstruction(i, e.target.value)}
                     rows={2}
-                    className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
                     placeholder={`Step ${i + 1}`}
                   />
                   {formData.instructions.length > 1 && (
@@ -670,11 +703,11 @@ export default function PostRecipeForm({
                   )}
                 </div>
               ))}
-              
+
               <button
                 type="button"
                 onClick={addInstruction}
-               className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
+                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 border-gray-200 text-black"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Add Instruction
@@ -707,26 +740,26 @@ export default function PostRecipeForm({
 
 /* -------------------------- Preview Card -------------------------- */
 function PreviewRecipeCard({
-    title,
-    description,
-    image,
-    cookTime,
-    servings,
-    categoryNames,
-    ingredientNames = [],
-    ingredients,
-    instructions,
-  }: {
-    title: string;
-    description: string;
-    image: string;
-    cookTime: string;
-    servings: number;
-    categoryNames: string[];
-    ingredientNames?: string[];
-    ingredients: string[];
-    instructions: string[];
-  }) {
+  title,
+  description,
+  image,
+  cookTime,
+  servings,
+  categoryNames,
+  ingredientNames = [],
+  ingredients,
+  instructions,
+}: {
+  title: string;
+  description: string;
+  image: string;
+  cookTime: string;
+  servings: number;
+  categoryNames: string[];
+  ingredientNames?: string[];
+  ingredients: string[];
+  instructions: string[];
+}) {
   return (
     <div className="border rounded-xl overflow-hidden shadow-sm">
       <img src={image} alt={title} className="w-full h-56 object-cover" />
@@ -741,12 +774,15 @@ function PreviewRecipeCard({
             <Users className="w-4 h-4" /> {servings} ที่
           </div>
           <div className="flex gap-2 flex-wrap mt-2">
-    {ingredientNames.map((n) => (
-      <span key={n} className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-md text-xs">
-        {n}
-      </span>
-    ))}
-  </div>
+            {ingredientNames.map((n) => (
+              <span
+                key={n}
+                className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-md text-xs"
+              >
+                {n}
+              </span>
+            ))}
+          </div>
           <div className="flex gap-2 flex-wrap">
             {categoryNames.map((c) => (
               <span
