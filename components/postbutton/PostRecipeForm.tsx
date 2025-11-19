@@ -580,7 +580,7 @@ export default function PostRecipeForm({
       onClick={addIngredient}
       className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
     >
-      <Plus className="w-4 h-4" /> เพิ่มบรรทัด
+      <Plus className="w-4 h-4" /> Add Ingredient
     </button>
   </div>
 
@@ -670,10 +670,11 @@ export default function PostRecipeForm({
                   )}
                 </div>
               ))}
+              
               <button
                 type="button"
                 onClick={addInstruction}
-                className="flex items-center text-orange-600 hover:text-orange-700"
+               className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Add Step
