@@ -16,20 +16,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HeroHeader2 } from "@/components/hero8-head2";
 import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
+// import type { OwnerPost } from "@/types/userPost";
+import type { PostResponse } from "@/types/post";
 import Link from "next/link";
 
-interface savedPost {
-  id: number;
-  img: string;
-}
 
 export default function ProfileOther() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const params = useParams();
-  const userID = params.id as string;
+  const username = params.username as string;
   const { token, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [savedPosts, setSavedPost] = useState<savedPost[] | null>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   
@@ -40,18 +38,18 @@ useEffect(() => {
     return;
   }
   let cancelled = false;
-  console.log("userID : "+ userID);
+  console.log("userName : "+ username);
   console.log("token : "+ token);
   (async () => {
     try {
       setErr(null);
       // Run both fetches in parallel
-      const [profileRes,savedPostRes] = await Promise.all([
-        fetch(`${API}/api/user/userprofile/${userID}`, {
+      const [profileRes, postRes] = await Promise.all([
+        fetch(`${API}/api/user/userprofile/${username}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         }),
-        fetch(`${API}/api/getallfavoritepost/${userID}`, {
+        fetch(`${API}/api/getallpost/${username}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         }),
@@ -59,17 +57,18 @@ useEffect(() => {
       
       // Check both responses
       if (!profileRes.ok) throw new Error(await profileRes.text());
-      if (!savedPostRes.ok) throw new Error(await savedPostRes.text());
+      if (!postRes.ok) throw new Error(await postRes.text());
+      // if (!savedPostRes.ok) throw new Error(await savedPostRes.text());
       
       // Parse both responses
-      const [profileData,savedPostData] = await Promise.all([
+      const [profileData, postData] = await Promise.all([
         profileRes.json(),
-        savedPostRes.json()
+        postRes.json(),
       ]);
       
       if (!cancelled) {
         setProfile(profileData);
-        setSavedPost(savedPostData);
+        setPosts(postData.posts || []);
       }
     } catch (e) {
       if (!cancelled)
@@ -78,26 +77,25 @@ useEffect(() => {
       if (!cancelled) setLoading(false);
     }
   })();
-  {console.log("savedPosts inside:", savedPosts)}
   return () => {
     cancelled = true;
   };
 }, [API, token, authLoading]);
 
-  const posts = [
-    {
-      id: 1,
-      img: "https://plus.unsplash.com/premium_photo-1675252369719-dd52bc69c3df?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: 2,
-      img: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: 3,
-      img: "https://images.unsplash.com/photo-1484723091739-30a097e8f929?q=80&w=1049&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-  ];
+  // const posts = [
+  //   {
+  //     id: 1,
+  //     img: "https://plus.unsplash.com/premium_photo-1675252369719-dd52bc69c3df?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  //   },
+  //   {
+  //     id: 2,
+  //     img: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  //   },
+  //   {
+  //     id: 3,
+  //     img: "https://images.unsplash.com/photo-1484723091739-30a097e8f929?q=80&w=1049&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  //   },
+  // ];
 
   if (loading)
     return (
@@ -247,11 +245,11 @@ useEffect(() => {
             {/* Posts grid – PC 3 col, Mobile 3 little squares like mock */}
             <TabsContent value="posts" className="p-6">
               <div className="grid grid-cols-3 gap-4 sm:gap-5">
-                {posts.map((p) => (
+                {posts.map((post) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    key={p.id}
-                    src={p.img}
+                    key={post.post.post_id}
+                    src={post.post.image_url}
                     alt="food"
                     className="aspect-square w-full rounded-2xl object-cover"
                   />
@@ -259,8 +257,8 @@ useEffect(() => {
               </div>
             </TabsContent>
 
-            <TabsContent value="likes" className="p-6">
-              {/* {console.log("savedPosts:"+ savedPosts)} */}
+            {/* <TabsContent value="likes" className="p-6">
+         
               {savedPosts && savedPosts.length > 0 ? (
                 <div className="grid grid-cols-3 gap-4 sm:gap-5">
                   {savedPosts.map((savedPost) => (
@@ -277,7 +275,7 @@ useEffect(() => {
                   You have no liked posts yet.
                 </p>
               )}
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent value="badges" className="p-6">
               <p className="text-sm text-neutral-600">

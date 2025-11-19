@@ -15,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HeroHeader2 } from "./hero8-head2";
 import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
-import type { OwnerPost } from "@/types/userPost";
+import type { PostResponse } from "@/types/post";
 import Link from "next/link";
 
 interface SavedPost {
@@ -37,9 +37,10 @@ export default function Profile() {
   const { token, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [savedPosts, setSavedPost] = useState<SavedPost[]>([]);
-  const [posts, setPosts] = useState<OwnerPost[]>([]); 
+  const [posts, setPosts] = useState<PostResponse[]>([]); 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  
   
   useEffect(() => {
     if (authLoading) return;
@@ -82,13 +83,13 @@ export default function Profile() {
         
         console.log("Profile data:", profileData);
         console.log("Saved posts data:", savedPostData);
-        console.log("Saved posts data:", postData);
+        console.log("postData:", postData);
         console.log("Token Here :", token);
         
         if (!cancelled) {
           setProfile(profileData);
           setSavedPost(savedPostData.posts || []); // ✅ Access .posts from response
-          setPosts(postData || []);
+          setPosts(postData.posts || []);
         }
       } catch (e) {
         if (!cancelled)
@@ -133,12 +134,12 @@ export default function Profile() {
       </>
     );
 
-  const fullName =
-    [profile?.firstname, profile?.lastname].filter(Boolean).join(" ") || "—";
+  const fullName = [profile?.firstname, profile?.lastname].filter(Boolean).join(" ") || "—";
   const email = profile?.email || "—";
   const phone = profile?.phone || "—";
   const about = profile?.aboutme || "—";
   const avatar = profile?.image_url;
+  console.log("Profile:", profile);
 
   return (
     <>
@@ -228,15 +229,25 @@ export default function Profile() {
             <TabsContent value="posts" className="p-6">
               {posts.length > 0 ? (
                 <div className="grid grid-cols-3 gap-4 sm:gap-5">
-                  {posts.map((post) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      // key={item.user_id}
-                      src={post.profile_image}
-                      alt="posts"
-                      className="aspect-square w-full rounded-2xl object-cover"
-                    />
-                  ))}
+                  {posts.map((post, index) => {
+                    console.log(`Post ${index}:`, post);
+                    console.log(`Image URL ${index}:`, post.post?.image_url);
+                    
+                    return (
+                      <Link key={post.post.post_id} href={`/Menu/${post.post.post_id}`}>
+                        <img
+                          key={post.post.post_id}
+                          src={post.post.image_url}
+                          alt="posts"
+                          className="aspect-square w-full rounded-2xl object-cover"
+                          onError={(e) => {
+                            console.error(`Failed to load image ${index}:`, post.post.image_url);
+                            e.currentTarget.src = 'https://via.placeholder.com/400?text=Error';
+                          }}
+                        />
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-neutral-600">

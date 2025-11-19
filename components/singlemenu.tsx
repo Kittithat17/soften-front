@@ -373,8 +373,8 @@ export default function RecipeDetailPage() {
   const profileHref =
     myUserId != null && Number(recipe.author.id) === myUserId
       ? "/profile"
-      : `/userprofile/${recipe.author.id}`;
-
+      : `/userprofile/${recipe.author.username}`;
+    console.log("author info : "+ recipe.author);
   return (
     <>
       <HeroHeader2 />
@@ -561,7 +561,7 @@ export default function RecipeDetailPage() {
                 <li key={c.id} className="flex gap-3">
                   {/* Avatar */}
                   <Link
-                    href={`/userprofile/${c.user.id}`}
+                    href={`/userprofile/${c.user.username}`}
                     className="shrink-0 relative"
                   >
                     <div className="w-10 h-10 rounded-full bg-yellow-400 text-white font-bold grid place-items-center">

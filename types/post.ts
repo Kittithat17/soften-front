@@ -1,12 +1,19 @@
-// types/post.ts
 export interface PostResponse {
+  owner_post: {
+    user_id: number;
+    username: string;
+    profile_image: string;
+    created_date: string;
+    created_time: string;
+  };
+  post: {
     post_id: number;
-    menu_name: string;
-    story: string;
     image_url: string;
-    categories_tags: string[];
-    ingredients_tags: string[];
-    ingredients: string[];
-    instructions: string[];
-  }
-  
+    menu_name?: string;
+    story?: string;
+    categories_tags?: string[];
+    ingredients_tags?: string[];
+    ingredients?: string[];
+    instructions?: string[];
+  };
+}
