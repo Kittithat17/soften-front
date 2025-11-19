@@ -312,10 +312,10 @@ export default function PostRecipeForm({
 
   // -------- Data used in preview card --------
   const preview = {
-    title: formData.title || "ชื่อเมนูของคุณ",
+    title: formData.title || "My Delicious Recipe",
     description: formData.description || "sadadad",
     image: previewUrl || "https://picsum.photos/800/600?blur=2",
-    cookTime: formData.cookTime || "30 นาที",
+    cookTime: formData.cookTime || "30 mins",
     servings: formData.servings || 1,
     categoryNames: formData.categories, // ใช้ชื่อแท็กตรง ๆ
     ingredients: formData.ingredients.filter((x) => x.trim()),
@@ -328,7 +328,7 @@ export default function PostRecipeForm({
       const has = sel.includes(name);
       if (has) return { ...prev, categories: sel.filter((c) => c !== name) };
       if (sel.length >= MAX_CATS) {
-        toast.error(`เลือกได้ไม่เกิน ${MAX_CATS} Categorirs`);
+        toast.error(` ${MAX_CATS} Categories`);
         return prev;
       }
       return { ...prev, categories: [...sel, name] };
@@ -520,7 +520,7 @@ export default function PostRecipeForm({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Categories * (เลือกได้สูงสุด 3)
+                  Categories * (Choose up to 3)
                 </label>
                 <span className="text-xs text-gray-500">
                   {formData.categories.length}/3 selected
@@ -694,7 +694,7 @@ export default function PostRecipeForm({
                 disabled={loading}
                 className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               >
-                {loading ? "กำลังโพสต์..." : "Share"}
+                {loading ? "Posting..." : "Share"}
               </button>
             </div>
           </form>
@@ -760,7 +760,7 @@ function PreviewRecipeCard({
 
         {/* ingredients */}
         <div className="mt-3">
-          <h4 className="font-semibold text-gray-900 mb-1">วัตถุดิบ</h4>
+          <h4 className="font-semibold text-gray-900 mb-1">Ingredients</h4>
           {ingredients.length ? (
             <ul className="list-disc list-inside text-sm text-gray-700 space-y-0.5">
               {ingredients.map((ing, idx) => (
@@ -768,13 +768,13 @@ function PreviewRecipeCard({
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-400">ยังไม่ได้ใส่วัตถุดิบ</p>
+            <p className="text-sm text-gray-400">No ingredients added yet</p>
           )}
         </div>
 
         {/* instructions */}
         <div className="mt-3">
-          <h4 className="font-semibold text-gray-900 mb-1">วิธีทำ</h4>
+          <h4 className="font-semibold text-gray-900 mb-1">Instructions</h4>
           {instructions.length ? (
             <ol className="list-decimal list-inside text-sm text-gray-700 space-y-0.5">
               {instructions.map((step, idx) => (
@@ -782,7 +782,7 @@ function PreviewRecipeCard({
               ))}
             </ol>
           ) : (
-            <p className="text-sm text-gray-400">ยังไม่ได้ใส่วิธีทำ</p>
+            <p className="text-sm text-gray-400">No instructions added yet</p>
           )}
         </div>
       </div>
