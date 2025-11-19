@@ -256,8 +256,8 @@ export default function RecipeDetailPage() {
           createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
           comments: [],
         };
-
         setRecipe(mapped);
+        
 
         // Check if already favorited
         if (token) {
@@ -373,7 +373,8 @@ export default function RecipeDetailPage() {
   const profileHref =
     myUserId != null && Number(recipe.author.id) === myUserId
       ? "/profile"
-      : `/userprofile/${recipe.author.username}`;
+      : `/userprofile/${recipe.author.id}`;
+    console.log("Recipe:", recipe);
     console.log("author info : "+ recipe.author);
   return (
     <>
@@ -383,7 +384,7 @@ export default function RecipeDetailPage() {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <Link
-              href={profileHref}
+              href={{pathname : profileHref, query: { username: recipe.author.username }}}
               className="flex items-center space-x-3 p-1 group"
               aria-label={`go to profile ${recipe.author.username}`}
             >

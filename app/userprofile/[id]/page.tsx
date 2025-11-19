@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams,useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   User as UserIcon,
@@ -24,63 +24,90 @@ import Link from "next/link";
 export default function ProfileOther() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const params = useParams();
-  const username = params.username as string;
+  const searchParams = useSearchParams();
+  const username = searchParams.get("username");
+  const id = decodeURIComponent(params.id as string);
+  // const username = decodeURIComponent(params.id as string);
   const { token, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<PostResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   
+  console.log(id);     // from path: "123"
+  console.log(username);   // from query: "Nattawat Ruensumrit"    
+  // console.log("Params:", params);
 useEffect(() => {
-  if (authLoading) return;
-  if (!token) {
-    setLoading(false);
+  if (!params.id) {
+    console.log("No id in params yet");
     return;
   }
+
+  if (authLoading) {
+    console.log("Auth still loading");
+    return;
+  }
+  
+  // if (!token) {
+  //   console.log("No token");
+  //   setLoading(false);
+  //   return;
+  // }
+
+  console.log("=== Starting fetch ===");
+  console.log("Frontend decoded id:", id);
+  console.log("Frontend decoded username:", username);
+  
   let cancelled = false;
-  console.log("userName : "+ username);
-  console.log("token : "+ token);
+
   (async () => {
     try {
       setErr(null);
-      // Run both fetches in parallel
+      setLoading(true); // ✅ Reset loading state
+      
       const [profileRes, postRes] = await Promise.all([
-        fetch(`${API}/api/user/userprofile/${username}`, {
+        fetch(`${API}/userprofile/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         }),
-        fetch(`${API}/api/getallpost/${username}`, {
+        fetch(`${API}/getallpost/${username}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         }),
       ]);
       
-      // Check both responses
+      console.log("Profile response status:", profileRes.status);
+      console.log("Post response status:", postRes.status);
+      
       if (!profileRes.ok) throw new Error(await profileRes.text());
       if (!postRes.ok) throw new Error(await postRes.text());
-      // if (!savedPostRes.ok) throw new Error(await savedPostRes.text());
       
-      // Parse both responses
       const [profileData, postData] = await Promise.all([
         profileRes.json(),
         postRes.json(),
       ]);
+      
+      console.log("Profile data received:", profileData);
+      console.log("Post data received:", postData);
+      console.log("Posts array from API:", postData.posts);
       
       if (!cancelled) {
         setProfile(profileData);
         setPosts(postData.posts || []);
       }
     } catch (e) {
+      console.error("Fetch error:", e);
       if (!cancelled)
         setErr(e instanceof Error ? e.message : "Fetch failed");
     } finally {
       if (!cancelled) setLoading(false);
     }
   })();
+  
   return () => {
     cancelled = true;
   };
-}, [API, token, authLoading]);
+}, [API, token, authLoading, id, username]);
 
   // const posts = [
   //   {
@@ -118,7 +145,8 @@ useEffect(() => {
   const phone = profile?.phone || "—";
   const about = profile?.aboutme || "—";
   const avatar = profile?.image_url;
-
+  console.log("Posts array:", posts) 
+  console.log("Posts length:", posts.length)
   return (
     <>
       <HeroHeader2 />
@@ -180,12 +208,12 @@ useEffect(() => {
 
                 {/* action buttons align right on desktop */}
                 <div className="mt-2 flex flex-col w-full gap-2 md:mt-0 md:w-auto">
-                  <Button className="w-full gap-2 rounded-2xl bg-[#F8D838] text-black hover:bg-[#e7c92f] md:w-auto">
+                  {/* <Button className="w-full gap-2 rounded-2xl bg-[#F8D838] text-black hover:bg-[#e7c92f] md:w-auto">
                     <Link href="/profile/edit" className="flex gap-2">
                       <Pencil className="h-4 w-4" />
                       Edit Profile
                     </Link>
-                  </Button>
+                  </Button> */}
                   <Button
                     variant="outline"
                     className="w-full gap-2 rounded-2xl md:w-auto"
@@ -244,38 +272,34 @@ useEffect(() => {
 
             {/* Posts grid – PC 3 col, Mobile 3 little squares like mock */}
             <TabsContent value="posts" className="p-6">
-              <div className="grid grid-cols-3 gap-4 sm:gap-5">
-                {posts.map((post) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={post.post.post_id}
-                    src={post.post.image_url}
-                    alt="food"
-                    className="aspect-square w-full rounded-2xl object-cover"
-                  />
-                ))}
-              </div>
-            </TabsContent>
-
-            {/* <TabsContent value="likes" className="p-6">
-         
-              {savedPosts && savedPosts.length > 0 ? (
+              {posts.length > 0 ? (
                 <div className="grid grid-cols-3 gap-4 sm:gap-5">
-                  {savedPosts.map((savedPost) => (
-                    <img
-                      key={savedPost.id}
-                      src={savedPost.img}
-                      alt="savedpost"
-                      className="aspect-square w-full rounded-2xl object-cover"  // Add this!
-                    />
+                  {posts.map((post) => (
+                    <Link 
+                      key={post.post.post_id}
+                      href={`/Menu/${post.post.post_id}`}
+                      className="block overflow-hidden rounded-2xl"
+                    >
+                      <img
+                        src={post.post.image_url}
+                        alt={post.post.menu_name || "food"}
+                        className="aspect-square w-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      />
+                    </Link>
                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-neutral-600">
-                  You have no liked posts yet.
+                  No posts yet.
                 </p>
               )}
-            </TabsContent> */}
+            </TabsContent>
+
+            <TabsContent value="likes" className="p-6">
+                <p className="text-sm text-neutral-600">
+                  Can't See Saved Post
+                </p>
+            </TabsContent> 
 
             <TabsContent value="badges" className="p-6">
               <p className="text-sm text-neutral-600">
