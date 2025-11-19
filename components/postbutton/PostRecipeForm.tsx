@@ -177,18 +177,18 @@ export default function PostRecipeForm({
     
     if (e) e.preventDefault();
     if (formData.categories.length === 0) {
-      return alert("Please select at least one category");
+      return toast.error("Please select at least one category");
     }
     if (formData.categories.length > 3) {
-      return alert("Choose up to 3 categories only");
+      return toast.error("Choose up to 3 categories only");
     }
 
     const cleanedIngredients = formData.ingredients.filter((i) => i.trim());
     const cleanedInstructions = formData.instructions.filter((i) => i.trim());
 
-    if (!formData.title.trim()) return alert("Please enter a menu name");
+    if (!formData.title.trim()) return toast.error("Please enter a menu name");
     if (!cleanedIngredients.length || !cleanedInstructions.length)
-      return alert("Please enter ingredients and instructions");
+      return toast.error("Please enter ingredients and instructions");
 
     
     const ingredientTagIdsRaw = ingredientTags

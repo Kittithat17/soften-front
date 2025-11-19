@@ -406,7 +406,7 @@ export default function RecipeDetailPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         console.error("RatePost failed:", data);
-        alert(data.message || "Failed to submit rating");
+        toast.error(data.message || "Failed to submit rating");
         return;
       }
   
@@ -414,7 +414,7 @@ export default function RecipeDetailPage() {
       await reloadRecipe(recipe.id);
     } catch (err) {
       console.error("Error while rating:", err);
-      alert("Something went wrong while rating. Please try again.");
+      toast.error("Something went wrong while rating. Please try again.");
     }
   };
   
