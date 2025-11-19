@@ -1,7 +1,7 @@
 //single menu detail page
 // components/RecipeDetailPage.tsx
 "use client";
-
+import type { PostResponse } from "@/types/post";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -270,7 +270,7 @@ export default function RecipeDetailPage() {
               const favData = await favRes.json();
               const posts = favData.posts || [];
               const isAlreadyFavorited = posts.some(
-                (item: any) => String(item.post.post_id) === String(id)
+                (item: PostResponse) => String(item.post.post_id) === String(id)
               );
               setIsFavorited(isAlreadyFavorited);
             }
