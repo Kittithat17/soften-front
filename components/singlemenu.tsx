@@ -1,5 +1,5 @@
 "use client";
-import type { PostResponse } from "@/types/post";
+
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -68,17 +68,7 @@ interface ApiOwner {
   created_time?: string;
 }
 
-interface ApiEnvelope {
-  owner_post?: ApiOwner;
-  post?: ApiPost;
-}
 
-// Add this interface near the top with your other types
-interface CommentUser {
-  id: number;
-  username: string;
-  profile_img?: string; // ✅ Make it optional
-}
 interface ApiComment {
   comment_id: number | string;
   content: string;
@@ -88,12 +78,7 @@ interface ApiComment {
   created_at: string;
 }
 
-interface RecipeComment {
-  id: number | string; // ✅ Allow both number and string
-  text: string;
-  user: CommentUser;
-  createdAt: string;
-}
+
 
 /** ---------- UI config ---------- */
 type CategoryItem = {
@@ -143,7 +128,19 @@ const INGREDIENT_ID_TO_NAME: Record<number, string> = {
   7: "Egg",
   8: "Grain",
   9: "Legume",
+  10: "Nuts & Seeds",
+  11: "Herbs",
+  12: "Spice",
+  13: "Oil & Fat",
+  14: "Sugar & Sweetener",
+  15: "Beverage",
+  16: "Condiment",
+  17: "Mushroom",
+  18: "Fungus & Seaweed",
+  19: "Baking Ingredient",
+  20: "Alcohol",
 };
+
 
 const labelToSlug = (s: string): CategorySlug =>
   s

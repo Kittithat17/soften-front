@@ -10,7 +10,6 @@ import {
   EyeOff,
   Clock,
   Users,
-  Send,
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -21,48 +20,44 @@ interface PostRecipeFormProps {
   isOpen: boolean;
   onClose: () => void;
 }
-const INGREDIENT_NAME_TO_ID: Record<string, number> = {
-  // master
-  vegetable: 1,
-  fruit: 2,
-  meat: 3,
-  seafood: 4,
-  poultry: 5,
-  dairy: 6,
-  egg: 7,
-  grain: 8,
-  legume: 9,
-  pork: 3,
-  beef: 3,
-  chicken: 5,
-  shrimp: 4,
-  fish: 4,
-  eggs: 7,
-  garlic: 1,
-  chilies: 1,
-  chilli: 1,
-  chili: 1,
-  rice: 8,
-  vegetables: 1,
-  fruits: 2,
-  beans: 9,
-  bean: 9,
-  milk: 6,
-};
-const SUGGESTED_ING_TAGS = [
-  "Pork",
-  "Rice",
-  "Garlic",
-  "Chilies",
-  "Eggs",
-  "Beef",
-  "Chicken",
-  "Shrimp",
-  "Fish",
-  "Vegetable",
-  "Poultry",
-  "Egg",
-];
+
+// ใช้เป็น master list เหมือน CATEGORY_TAGS
+const INGREDIENT_TAGS = [
+  "Vegetable",          // 1
+  "Fruit",              // 2
+  "Meat",               // 3
+  "Seafood",            // 4
+  "Poultry",            // 5
+  "Dairy",              // 6
+  "Egg",                // 7
+  "Grain",              // 8
+  "Legume",             // 9
+  "Nuts & Seeds",       // 10
+  "Herbs",              // 11
+  "Spice",              // 12
+  "Oil & Fat",          // 13
+  "Sugar & Sweetener",  // 14
+  "Beverage",           // 15
+  "Condiment",          // 16
+  "Mushroom",           // 17
+  "Fungus & Seaweed",   // 18
+  "Baking Ingredient",  // 19
+  "Alcohol",            // 20
+] as const;
+
+// map ชื่อ → id (ใช้ตอนส่งไป BE)
+const INGREDIENT_NAME_TO_ID: Record<string, number> = Object.fromEntries(
+  INGREDIENT_TAGS.map((name, idx) => [name.toLowerCase(), idx + 1])
+);
+
+// map id → ชื่อ (ใช้ตอน preview, ingredient_names ฯลฯ)
+const INGREDIENT_ID_TO_NAME: Record<number, string> = Object.fromEntries(
+  INGREDIENT_TAGS.map((name, idx) => [idx + 1, name])
+);
+
+// ปุ่ม quick tag ให้ user เลือกได้แค่ 20 อันนี้
+const SUGGESTED_ING_TAGS = [...INGREDIENT_TAGS];
+
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const CATEGORY_TAGS = [
@@ -94,21 +89,9 @@ const CATEGORY_ID_MAP: Record<CategoryTag, number> = {
   Noodles: 11,
   Rice: 12,
 };
-const CATEGORY_ID_TO_NAME: Record<number, CategoryTag> = Object.fromEntries(
-  Object.entries(CATEGORY_ID_MAP).map(([name, id]) => [id, name as CategoryTag])
-) as Record<number, CategoryTag>;
 
-const INGREDIENT_ID_TO_NAME: Record<number, string> = {
-  1: "Vegetable",
-  2: "Fruit",
-  3: "Meat",
-  4: "Seafood",
-  5: "Poultry",
-  6: "Dairy",
-  7: "Egg",
-  8: "Grain",
-  9: "Legume",
-};
+
+
 
 export default function PostRecipeForm({
   isOpen,
@@ -118,7 +101,7 @@ export default function PostRecipeForm({
   const router = useRouter();
 
   const [ingredientTags, setIngredientTags] = useState<string[]>([]);
-  const [ingredientTagInput, setIngredientTagInput] = useState("");
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -130,12 +113,13 @@ export default function PostRecipeForm({
     image: null as File | null,
   });
   // helper
-  const norm = (s: string) => s.trim().replace(/\s+/g, " ");
-  const addIngredientTag = (raw?: string) => {
-    const v = norm(raw ?? ingredientTagInput);
+  
+  const addIngredientTag = (raw: string) => {
+    const v = raw.trim();
     if (!v) return;
-    if (!ingredientTags.includes(v)) setIngredientTags((xs) => [...xs, v]);
-    setIngredientTagInput("");
+    if (!ingredientTags.includes(v)) {
+      setIngredientTags((xs) => [...xs, v]);
+    }
   };
   const removeIngredientTag = (name: string) =>
     setIngredientTags((xs) => xs.filter((x) => x !== name));
@@ -283,7 +267,6 @@ export default function PostRecipeForm({
         image: null,
       });
       setIngredientTags([]); // reset tag
-      setIngredientTagInput("");
       setIsPreviewMode(false);
       onClose();
       router.push("/Menu");
@@ -618,28 +601,7 @@ export default function PostRecipeForm({
               </label>
 
               {/* ช่องพิมพ์ + ปุ่ม + */}
-              <div className="flex gap-2 mb-2 text-black ">
-                <input
-                  value={ingredientTagInput}
-                  onChange={(e) => setIngredientTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addIngredientTag();
-                    }
-                  }}
-                  placeholder="Type your main ingredients here..."
-                  className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => addIngredientTag()}
-                  className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50"
-                  title="Add tag"
-                >
-                  +
-                </button>
-              </div>
+              
 
               {/* ปุ่ม + ชุดใหญ่เหมือนในภาพ (quick chips) */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
