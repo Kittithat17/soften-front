@@ -331,7 +331,7 @@ export default function SearchPage() {
         ingredients: detail.ingredients ?? [],
         ingredientsTags: ingTags,
         instructions: detail.instructions ?? [],
-        createdAt: "Today",
+        createdAt: "วันนี้",
         comments: [],
       };
 
@@ -553,7 +553,20 @@ export default function SearchPage() {
             {/* Ingredient Input Modal */}
             {showIngredientInput && (
               <div className="mb-4 p-4 border border-yellow-200 rounded-lg bg-yellow-50">
-                
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    value={newIngredient}
+                    onChange={(e) => setNewIngredient(e.target.value)}
+                    placeholder="Type an ingredient and press Enter"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        addIngredient(newIngredient);
+                      }
+                    }}
+                  />
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
                   {availableIngredients.map((ingredient) => (
                     <button

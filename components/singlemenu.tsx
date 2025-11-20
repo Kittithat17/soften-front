@@ -1,5 +1,5 @@
 "use client";
-
+import type { PostResponse } from "@/types/post";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -68,7 +68,17 @@ interface ApiOwner {
   created_time?: string;
 }
 
+interface ApiEnvelope {
+  owner_post?: ApiOwner;
+  post?: ApiPost;
+}
 
+// Add this interface near the top with your other types
+interface CommentUser {
+  id: number;
+  username: string;
+  profile_img?: string; // ✅ Make it optional
+}
 interface ApiComment {
   comment_id: number | string;
   content: string;
@@ -78,7 +88,12 @@ interface ApiComment {
   created_at: string;
 }
 
-
+interface RecipeComment {
+  id: number | string; // ✅ Allow both number and string
+  text: string;
+  user: CommentUser;
+  createdAt: string;
+}
 
 /** ---------- UI config ---------- */
 type CategoryItem = {

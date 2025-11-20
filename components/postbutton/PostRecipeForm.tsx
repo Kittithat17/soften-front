@@ -10,6 +10,7 @@ import {
   EyeOff,
   Clock,
   Users,
+  Send,
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -20,44 +21,206 @@ interface PostRecipeFormProps {
   isOpen: boolean;
   onClose: () => void;
 }
+const INGREDIENT_NAME_TO_ID: Record<string, number> = {
+  // ----- 1: Vegetable -----
+  vegetable: 1,
+  vegetables: 1,
+  veg: 1,
+  "green vegetable": 1,
+  "leafy vegetable": 1,
+  garlic: 1,
+  onion: 1,
+  tomato: 1,
+  carrot: 1,
+  cabbage: 1,
+  broccoli: 1,
+  chili: 1,
+  chilli: 1,
+  chilies: 1,
+  "bell pepper": 1,
 
-// ใช้เป็น master list เหมือน CATEGORY_TAGS
-const INGREDIENT_TAGS = [
-  "Vegetable",          // 1
-  "Fruit",              // 2
-  "Meat",               // 3
-  "Seafood",            // 4
-  "Poultry",            // 5
-  "Dairy",              // 6
-  "Egg",                // 7
-  "Grain",              // 8
-  "Legume",             // 9
-  "Nuts & Seeds",       // 10
-  "Herbs",              // 11
-  "Spice",              // 12
-  "Oil & Fat",          // 13
-  "Sugar & Sweetener",  // 14
-  "Beverage",           // 15
-  "Condiment",          // 16
-  "Mushroom",           // 17
-  "Fungus & Seaweed",   // 18
-  "Baking Ingredient",  // 19
-  "Alcohol",            // 20
-] as const;
+  // ----- 2: Fruit -----
+  fruit: 2,
+  fruits: 2,
+  apple: 2,
+  banana: 2,
+  orange: 2,
+  mango: 2,
+  pineapple: 2,
+  lemon: 2,
+  lime: 2,
 
-// map ชื่อ → id (ใช้ตอนส่งไป BE)
-const INGREDIENT_NAME_TO_ID: Record<string, number> = Object.fromEntries(
-  INGREDIENT_TAGS.map((name, idx) => [name.toLowerCase(), idx + 1])
-);
+  // ----- 3: Meat -----
+  meat: 3,
+  pork: 3,
+  beef: 3,
+  lamb: 3,
+  bacon: 3,
+  ham: 3,
 
-// map id → ชื่อ (ใช้ตอน preview, ingredient_names ฯลฯ)
-const INGREDIENT_ID_TO_NAME: Record<number, string> = Object.fromEntries(
-  INGREDIENT_TAGS.map((name, idx) => [idx + 1, name])
-);
+  // ----- 4: Seafood -----
+  seafood: 4,
+  shrimp: 4,
+  prawn: 4,
+  fish: 4,
+  squid: 4,
+  crab: 4,
+  "shell fish": 4,
+  shellfish: 4,
 
-// ปุ่ม quick tag ให้ user เลือกได้แค่ 20 อันนี้
-const SUGGESTED_ING_TAGS = [...INGREDIENT_TAGS];
+  // ----- 5: Poultry -----
+  poultry: 5,
+  chicken: 5,
+  duck: 5,
 
+  // ----- 6: Dairy -----
+  dairy: 6,
+  milk: 6,
+  cheese: 6,
+  butter: 6,
+  yogurt: 6,
+  cream: 6,
+
+  // ----- 7: Egg -----
+  egg: 7,
+  eggs: 7,
+
+  // ----- 8: Grain -----
+  grain: 8,
+  grains: 8,
+  rice: 8,
+  "brown rice": 8,
+  "white rice": 8,
+  noodle: 8,
+  noodles: 8,
+  pasta: 8,
+  bread: 8,
+
+  // ----- 9: Legume -----
+  legume: 9,
+  legumes: 9,
+  bean: 9,
+  beans: 9,
+  lentil: 9,
+  lentils: 9,
+  pea: 9,
+  peas: 9,
+
+  // ----- 10: Nuts & Seeds -----
+  "nuts & seeds": 10,
+  nuts: 10,
+  nut: 10,
+  seed: 10,
+  seeds: 10,
+  almond: 10,
+  peanut: 10,
+  cashew: 10,
+  sesame: 10,
+
+  // ----- 11: Herbs -----
+  herb: 11,
+  herbs: 11,
+  basil: 11,
+  cilantro: 11,
+  coriander: 11,
+  parsley: 11,
+  mint: 11,
+  rosemary: 11,
+  thyme: 11,
+
+  // ----- 12: Spice -----
+  spice: 12,
+  spices: 12,
+  pepper: 12,
+  "black pepper": 12,
+  cumin: 12,
+  curry: 12,
+  paprika: 12,
+  turmeric: 12,
+  cinnamon: 12,
+
+  // ----- 13: Oil & Fat -----
+  "oil & fat": 13,
+  oil: 13,
+  "vegetable oil": 13,
+  "olive oil": 13,
+  lard: 13,
+  shortening: 13,
+
+  // ----- 14: Sugar & Sweetener -----
+  "sugar & sweetener": 14,
+  sugar: 14,
+  honey: 14,
+  syrup: 14,
+  "maple syrup": 14,
+  sweetener: 14,
+
+  // ----- 15: Beverage -----
+  beverage: 15,
+  drink: 15,
+  drinks: 15,
+  juice: 15,
+  tea: 15,
+  coffee: 15,
+  soda: 15,
+  "soft drink": 15,
+
+  // ----- 16: Condiment -----
+  condiment: 16,
+  sauce: 16,
+  "soy sauce": 16,
+  "fish sauce": 16,
+  ketchup: 16,
+  mayonnaise: 16,
+  mayo: 16,
+  mustard: 16,
+  "chili sauce": 16,
+
+  // ----- 17: Mushroom -----
+  mushroom: 17,
+  mushrooms: 17,
+  "shiitake mushroom": 17,
+  "oyster mushroom": 17,
+
+  // ----- 18: Fungus & Seaweed -----
+  "fungus & seaweed": 18,
+  seaweed: 18,
+  nori: 18,
+  kelp: 18,
+  wakame: 18,
+  fungus: 18,
+
+  // ----- 19: Baking Ingredient -----
+  "baking ingredient": 19,
+  flour: 19,
+  "all-purpose flour": 19,
+  yeast: 19,
+  "baking powder": 19,
+  "baking soda": 19,
+  cornstarch: 19,
+
+  // ----- 20: Alcohol -----
+  alcohol: 20,
+  wine: 20,
+  beer: 20,
+  rum: 20,
+  vodka: 20,
+};
+
+const SUGGESTED_ING_TAGS = [
+  "Pork",
+  "Rice",
+  "Garlic",
+  "Chilies",
+  "Eggs",
+  "Beef",
+  "Chicken",
+  "Shrimp",
+  "Fish",
+  "Vegetable",
+  "Poultry",
+  "Egg",
+];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const CATEGORY_TAGS = [
@@ -89,8 +252,32 @@ const CATEGORY_ID_MAP: Record<CategoryTag, number> = {
   Noodles: 11,
   Rice: 12,
 };
+const CATEGORY_ID_TO_NAME: Record<number, CategoryTag> = Object.fromEntries(
+  Object.entries(CATEGORY_ID_MAP).map(([name, id]) => [id, name as CategoryTag])
+) as Record<number, CategoryTag>;
 
-
+const INGREDIENT_ID_TO_NAME: Record<number, string> = {
+  1: "Vegetable",
+  2: "Fruit",
+  3: "Meat",
+  4: "Seafood",
+  5: "Poultry",
+  6: "Dairy",
+  7: "Egg",
+  8: "Grain",
+  9: "Legume",
+  10: "Nuts & Seeds",
+  11: "Herbs",
+  12: "Spice",
+  13: "Oil & Fat",
+  14: "Sugar & Sweetener",
+  15: "Beverage",
+  16: "Condiment",
+  17: "Mushroom",
+  18: "Fungus & Seaweed",
+  19: "Baking Ingredient",
+  20: "Alcohol",
+};
 
 
 export default function PostRecipeForm({
@@ -101,7 +288,7 @@ export default function PostRecipeForm({
   const router = useRouter();
 
   const [ingredientTags, setIngredientTags] = useState<string[]>([]);
-  
+  const [ingredientTagInput, setIngredientTagInput] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -113,13 +300,12 @@ export default function PostRecipeForm({
     image: null as File | null,
   });
   // helper
-  
-  const addIngredientTag = (raw: string) => {
-    const v = raw.trim();
+  const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+  const addIngredientTag = (raw?: string) => {
+    const v = norm(raw ?? ingredientTagInput);
     if (!v) return;
-    if (!ingredientTags.includes(v)) {
-      setIngredientTags((xs) => [...xs, v]);
-    }
+    if (!ingredientTags.includes(v)) setIngredientTags((xs) => [...xs, v]);
+    setIngredientTagInput("");
   };
   const removeIngredientTag = (name: string) =>
     setIngredientTags((xs) => xs.filter((x) => x !== name));
@@ -267,6 +453,7 @@ export default function PostRecipeForm({
         image: null,
       });
       setIngredientTags([]); // reset tag
+      setIngredientTagInput("");
       setIsPreviewMode(false);
       onClose();
       router.push("/Menu");
@@ -601,7 +788,28 @@ export default function PostRecipeForm({
               </label>
 
               {/* ช่องพิมพ์ + ปุ่ม + */}
-              
+              <div className="flex gap-2 mb-2 text-black ">
+                <input
+                  value={ingredientTagInput}
+                  onChange={(e) => setIngredientTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addIngredientTag();
+                    }
+                  }}
+                  placeholder="Type your main ingredients here..."
+                  className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => addIngredientTag()}
+                  className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50"
+                  title="Add tag"
+                >
+                  +
+                </button>
+              </div>
 
               {/* ปุ่ม + ชุดใหญ่เหมือนในภาพ (quick chips) */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
