@@ -451,13 +451,43 @@ export default function RecipeDetailPage() {
     if (!recipe) return;
 
     setUserRating(rating);
+
+    try {
+      const form = new FormData();
+      form.append("post_id", recipe.id);
+      form.append("rate", String(rating));
+
+      const res = await fetch(`${API}/api/ratepost`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("RatePost failed:", data);
+        toast.error(data.message || "Failed to submit rating");
+        return;
+      }
+
+      // ✅ ยิงสำเร็จแล้ว → reload post เพื่อดึง avg rating ล่าสุดจาก DB
+      await reloadRecipe(recipe.id);
+    } catch (err) {
+      console.error("Error while rating:", err);
+      toast.error("Something went wrong while rating. Please try again.");
+    }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    // ✅ Store form reference BEFORE async operations
+    const form = e.currentTarget;
+    
     // ✅ Get the comment value from the form
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const commentText = formData.get('comment') as string;
     
     if (!commentText?.trim()) {
@@ -475,7 +505,6 @@ export default function RecipeDetailPage() {
     try {
       const API = process.env.NEXT_PUBLIC_API_BASE!;
       
-      // ✅ Send as form-data to match backend
       const submitData = new FormData();
       submitData.append('post_id', id);
       submitData.append('content', commentText.trim());
@@ -496,7 +525,6 @@ export default function RecipeDetailPage() {
       const data = await res.json();
       console.log("Comment posted response:", data);
 
-      // ✅ Add the new comment to the UI immediately
       if (recipe && authUser) {
         const newComment = {
           id: Date.now(),
@@ -523,8 +551,8 @@ export default function RecipeDetailPage() {
         });
       }
 
-      // ✅ Reset the form
-      e.currentTarget.reset();
+      // ✅ Reset the form using stored reference
+      form.reset();
       
     } catch (error) {
       console.error("Failed to post comment:", error);
@@ -751,7 +779,7 @@ export default function RecipeDetailPage() {
                 {recipe.comments.map((c) => (
                   <li key={c.id} className="flex gap-3">
                     <Link
-                      href={`/userprofile/${c.user.id}`}
+                      href={`/userprofile/${c.user.id}?username=${c.user.username}`}
                       className="shrink-0 relative"
                     >
                       {c.user.profile_img && c.user.profile_img !== '<nil>' ? (

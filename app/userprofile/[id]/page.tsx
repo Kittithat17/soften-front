@@ -19,7 +19,7 @@ import type { UserProfile } from "@/types/profile";
 // import type { OwnerPost } from "@/types/userPost";
 import type { PostResponse } from "@/types/post";
 import Link from "next/link";
-
+import Image from "next/image";
 
 export default function ProfileOther() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
@@ -65,14 +65,16 @@ useEffect(() => {
       setErr(null);
       setLoading(true); // ✅ Reset loading state
       
+
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
+
       const [profileRes, postRes] = await Promise.all([
         fetch(`${API}/userprofile/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
+          headers,
         }),
         fetch(`${API}/getallpost/${username}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
+          headers,
         }),
       ]);
       
@@ -158,7 +160,7 @@ useEffect(() => {
             <div className="flex flex-col items-center md:items-start">
               <div className="relative">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#F8D838] ring-4 ring-white md:h-28 md:w-28">
-                  {avatar ? (
+                  {avatar && avatar !== "" && avatar !== "<nil>" ? ( // ✅ Add checks for empty string and <nil>
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={avatar}
@@ -280,11 +282,18 @@ useEffect(() => {
                       href={`/Menu/${post.post.post_id}`}
                       className="block overflow-hidden rounded-2xl"
                     >
-                      <img
-                        src={post.post.image_url}
-                        alt={post.post.menu_name || "food"}
-                        className="aspect-square w-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      />
+                      {post.post.image_url && post.post.image_url !== "" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={post.post.image_url}
+                          alt={post.post.menu_name || "food"}
+                          className="aspect-square w-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        />
+                      ) : (
+                        <div className="aspect-square w-full bg-gray-200 flex items-center justify-center text-gray-400">
+                          No Image
+                        </div>
+                      )}
                     </Link>
                   ))}
                 </div>

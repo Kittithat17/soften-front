@@ -51,6 +51,7 @@ interface ApiPost {
   ingredients?: string[];
   instructions?: string[];
   star?: number;
+  created_date?: string;
 }
 
 interface ApiOwner {
@@ -258,17 +259,17 @@ export default function SearchPage() {
             id: safeId,
             title: p.menu_name || p.title || "Untitled",
             description: p.story || p.Details || "",
-            image: p.image_url || "/default-image.png",
+            image: p.image_url || "/default-image.png", // ✅ Fixed
             author: { id: 0, username: "Unknown" },
             rating: typeof p.star === "number" ? p.star : 0,
             totalRatings: 0,
-            cookTime: "30 นาที",
+            cookTime: "30 mins",
             servings: 1,
             categories: catSlugs,
             ingredients: p.ingredients ?? [],
             ingredientsTags: ingTags,
             instructions: p.instructions ?? [],
-            createdAt: "วันนี้",
+            createdAt: p.created_date || "",
             comments: [],
           };
         });
@@ -308,7 +309,7 @@ export default function SearchPage() {
         id: safeId,
         title: detail.menu_name || detail.title || "Untitled",
         description: detail.story || detail.Details || "",
-        image: detail.image_url || "/default-image.png",
+        image: String(detail.image_url),
         author: { id: 0, username: "Unknown" },
         rating: typeof detail.star === "number" ? detail.star : 0,
         totalRatings: 0,
