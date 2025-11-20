@@ -306,7 +306,7 @@ useEffect(() => {
 
             <TabsContent value="likes" className="p-6">
                 <p className="text-sm text-neutral-600">
-                  Can't See Saved Post
+                Can&#39;t saved posts yet…
                 </p>
             </TabsContent> 
 

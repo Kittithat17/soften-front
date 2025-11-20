@@ -54,6 +54,12 @@ interface ApiPost {
   instructions?: Array<string | number>;
   star?: number;
 }
+interface ApiFavoriteItem {
+  post: {
+    post_id: number | string;
+    // ถ้ามี field อื่น ๆ ก็เพิ่มได้ แต่เอาเท่าที่ใช้ก็พอ
+  };
+}
 
 interface ApiOwner {
   user_id?: number;
@@ -73,6 +79,14 @@ interface CommentUser {
   username: string;
   profile_img?: string; // ✅ Make it optional
 }
+interface ApiComment {
+  comment_id: number | string;
+  content: string;
+  user_id: number | string;
+  username: string;
+  profile_img?: string | null;
+  created_at: string;
+}
 
 interface RecipeComment {
   id: number | string; // ✅ Allow both number and string
@@ -80,7 +94,6 @@ interface RecipeComment {
   user: CommentUser;
   createdAt: string;
 }
-
 
 /** ---------- UI config ---------- */
 type CategoryItem = {
@@ -235,6 +248,28 @@ function getCurrentUserId(
 export default function RecipeDetailPage() {
   const { user: authUser, token } = useAuth();
   const API = process.env.NEXT_PUBLIC_API_BASE!;
+  const getProfileImageFromUser = (
+    user: AppUser | null | undefined
+  ): string => {
+    if (!user) return "";
+
+    if ("profile_img" in user) {
+      const u = user as AppUser & { profile_img?: string };
+      if (typeof u.profile_img === "string" && u.profile_img) {
+        return u.profile_img;
+      }
+    }
+
+    if ("image_url" in user) {
+      const u = user as AppUser & { image_url?: string };
+      if (typeof u.image_url === "string" && u.image_url) {
+        return u.image_url;
+      }
+    }
+
+    return "";
+  };
+
   const myUserId = useMemo(
     () => getCurrentUserId(authUser, token),
     [authUser, token]
@@ -274,106 +309,118 @@ export default function RecipeDetailPage() {
   };
 
   useEffect(() => {
-  const fetchRecipe = async () => {
-    try {
-      const API = process.env.NEXT_PUBLIC_API_BASE!;
-      
-      // ✅ Create headers conditionally
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-      
-      // Fetch recipe and comments in parallel (guests can see both)
-      const [recipeRes, commentsRes] = await Promise.all([
-        fetch(`${API}/getpostbypostid/${id}`, { headers }),
-        fetch(`${API}/getcommentsbypostid/${id}`, { headers })
-      ]);
+    const fetchRecipe = async () => {
+      try {
+        const API = process.env.NEXT_PUBLIC_API_BASE!;
 
-      const data = await recipeRes.json();
-      if (!recipeRes.ok) throw new Error(data.message || "Failed to fetch");
+        // ✅ Create headers conditionally
+        const headers: HeadersInit = token
+          ? { Authorization: `Bearer ${token}` }
+          : {};
 
-      const p = data.post;
-      const u = data.owner_post;
-      if (!p) throw new Error("No recipe found");
+        // Fetch recipe and comments in parallel (guests can see both)
+        const [recipeRes, commentsRes] = await Promise.all([
+          fetch(`${API}/getpostbypostid/${id}`, { headers }),
+          fetch(`${API}/getcommentsbypostid/${id}`, { headers }),
+        ]);
 
-      const catSlugs: CategorySlug[] = (
-        Array.isArray(p.categories_tags) ? p.categories_tags : []
-      )
-        .map((v: number | string) =>
-          typeof v === "number"
-            ? CATEGORY_ID_TO_SLUG[v]
-            : labelToSlug(String(v))
+        const data = await recipeRes.json();
+        if (!recipeRes.ok) throw new Error(data.message || "Failed to fetch");
+
+        const p = data.post;
+        const u = data.owner_post;
+        if (!p) throw new Error("No recipe found");
+
+        const catSlugs: CategorySlug[] = (
+          Array.isArray(p.categories_tags) ? p.categories_tags : []
         )
-        .filter(Boolean) as CategorySlug[];
+          .map((v: number | string) =>
+            typeof v === "number"
+              ? CATEGORY_ID_TO_SLUG[v]
+              : labelToSlug(String(v))
+          )
+          .filter(Boolean) as CategorySlug[];
 
-      // Get comments
-      let comments = [];
-      if (commentsRes.ok) {
-        const commentsData = await commentsRes.json();
-        console.log("Comments data from API:", commentsData);
-        
-        comments = (commentsData.comments || []).map((c: any) => ({
-          id: c.comment_id,
-          text: c.content,
-          user: {
-            id: c.user_id,
-            username: c.username,
-            profile_img: (c.profile_img && c.profile_img !== '<nil>' && c.profile_img !== 'null') 
-              ? c.profile_img 
-              : ""
-          },
-          createdAt: c.created_at
-        }));
-      }
+        // Get comments
+        let comments: Recipe["comments"] = [];
 
-      const mapped: Recipe = {
-        id: String(p.post_id),
-        title: p.menu_name ?? "Untitled",
-        description: p.story ?? "",
-        image: p.image_url ?? "/default-image.png",
-        author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
-        rating: 4.5,
-        totalRatings: 0,
-        cookTime: "30 นาที",
-        servings: 1,
-        categories: catSlugs,
-        ingredients: Array.isArray(p.ingredients)
-          ? p.ingredients.map(String)
-          : [],
-        ingredientsTags: normalizeIngredientTags(p),
-        instructions: Array.isArray(p.instructions)
-          ? p.instructions.map(String)
-          : [],
-        createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
-        comments: comments,
-      };
-      setRecipe(mapped);
+        if (commentsRes.ok) {
+          const commentsData: { comments?: ApiComment[] } =
+            await commentsRes.json();
+          console.log("Comments data from API:", commentsData);
 
-      // Check if already favorited (only for logged in users)
-      if (token) {
-        try {
-          const favRes = await fetch(`${API}/api/getallfavoritepost`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (favRes.ok) {
-            const favData = await favRes.json();
-            const posts = favData.posts || [];
-            const isAlreadyFavorited = posts.some(
-              (item: any) => String(item.post.post_id) === String(id)
-            );
-            setIsFavorited(isAlreadyFavorited);
-          }
-        } catch (err) {
-          console.error("Failed to check favorite status:", err);
+          comments = (commentsData.comments ?? []).map(
+            (c): Recipe["comments"][number] => ({
+              id: c.comment_id,
+              text: c.content,
+              user: {
+                id: Number(c.user_id),
+                username: c.username,
+                profile_img:
+                  c.profile_img &&
+                  c.profile_img !== "<nil>" &&
+                  c.profile_img !== "null"
+                    ? c.profile_img
+                    : "",
+              } as User, // ใช้ User จาก "@/types/user"
+              createdAt: c.created_at,
+            })
+          );
+          
+          
         }
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  if (id) fetchRecipe();
-}, [id, token]); // ✅ Keep token in dependencies
+        const mapped: Recipe = {
+          id: String(p.post_id),
+          title: p.menu_name ?? "Untitled",
+          description: p.story ?? "",
+          image: p.image_url ?? "/default-image.png",
+          author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
+          rating: 4.5,
+          totalRatings: 0,
+          cookTime: "30 นาที",
+          servings: 1,
+          categories: catSlugs,
+          ingredients: Array.isArray(p.ingredients)
+            ? p.ingredients.map(String)
+            : [],
+          ingredientsTags: normalizeIngredientTags(p),
+          instructions: Array.isArray(p.instructions)
+            ? p.instructions.map(String)
+            : [],
+          createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
+          comments: comments,
+        };
+        setRecipe(mapped);
+
+        // Check if already favorited (only for logged in users)
+        if (token) {
+          try {
+            const favRes = await fetch(`${API}/api/getallfavoritepost`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (favRes.ok) {
+              const favData: { posts?: ApiFavoriteItem[] } =
+                await favRes.json();
+              const posts = favData.posts ?? [];
+              const isAlreadyFavorited = posts.some(
+                (item) => String(item.post.post_id) === String(id)
+              );
+              setIsFavorited(isAlreadyFavorited);
+            }
+          } catch (err) {
+            console.error("Failed to check favorite status:", err);
+          }
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchRecipe();
+  }, [id, token]); // ✅ Keep token in dependencies
 
   const toggleFavorite = async () => {
     if (!token) {
@@ -482,33 +529,33 @@ export default function RecipeDetailPage() {
 
   const handleCommentSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     // ✅ Store form reference BEFORE async operations
     const form = e.currentTarget;
-    
+
     // ✅ Get the comment value from the form
     const formData = new FormData(form);
-    const commentText = formData.get('comment') as string;
-    
+    const commentText = formData.get("comment") as string;
+
     if (!commentText?.trim()) {
       alert("Please write a comment");
       return;
     }
-    
+
     if (!token) {
-      alert("Please login to comment");
+      toast.error("Please login to comment");
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const API = process.env.NEXT_PUBLIC_API_BASE!;
-      
+
       const submitData = new FormData();
-      submitData.append('post_id', id);
-      submitData.append('content', commentText.trim());
-      
+      submitData.append("post_id", id);
+      submitData.append("content", commentText.trim());
+
       const res = await fetch(`${API}/api/addcomment`, {
         method: "POST",
         headers: {
@@ -532,19 +579,21 @@ export default function RecipeDetailPage() {
           user: {
             id: myUserId || 0,
             username: authUser.username || "You",
-            profile_img: (authUser as any).profile_img || (authUser as any).image_url || ""
+            profile_img: getProfileImageFromUser(authUser),
           },
-          createdAt: new Date().toLocaleString("sv-SE", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false
-          }).replace("T", " "),
+          createdAt: new Date()
+            .toLocaleString("sv-SE", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })
+            .replace("T", " "),
         };
-        
+
         setRecipe({
           ...recipe,
           comments: [newComment, ...recipe.comments],
@@ -553,10 +602,9 @@ export default function RecipeDetailPage() {
 
       // ✅ Reset the form using stored reference
       form.reset();
-      
     } catch (error) {
       console.error("Failed to post comment:", error);
-      alert("Failed to post comment. Please try again.");
+      toast.error("Failed to post comment. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -575,7 +623,10 @@ export default function RecipeDetailPage() {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <Link
-              href={{pathname : profileHref, query: { username: recipe.author.username }}}
+              href={{
+                pathname: profileHref,
+                query: { username: recipe.author.username },
+              }}
               className="flex items-center space-x-3 p-1 group"
               aria-label={`Go to ${recipe.author.username}'s profile`}
             >
@@ -619,7 +670,9 @@ export default function RecipeDetailPage() {
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
-            <p className="text-gray-600 dark:text-amber-50 mb-4">{recipe.description}</p>
+            <p className="text-gray-600 dark:text-amber-50 mb-4">
+              {recipe.description}
+            </p>
 
             {/* Ingredient Tags */}
             {(recipe.ingredientsTags?.length ?? 0) > 0 && (
@@ -678,7 +731,7 @@ export default function RecipeDetailPage() {
             <CardTitle>Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
-          <div className="space-y-4">
+            <div className="space-y-4">
               {recipe.ingredients.map((ing, idx) => (
                 <div key={idx} className="flex space-x-4">
                   <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
@@ -706,9 +759,7 @@ export default function RecipeDetailPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className=" leading-relaxed">
-                      {instruction}
-                    </p>
+                    <p className=" leading-relaxed">{instruction}</p>
                   </div>
                 </div>
               ))}
@@ -765,14 +816,14 @@ export default function RecipeDetailPage() {
                 <p className="text-sm text-gray-600 mb-3">
                   Please log in to leave a comment
                 </p>
-                <Link href="/login">
+                <Link href="/Login">
                   <Button className="bg-yellow-400 hover:bg-yellow-500 text-black">
                     Log In to Comment
                   </Button>
                 </Link>
               </div>
             )}
-            
+
             {/* ✅ Comments list - visible to everyone */}
             {recipe.comments.length > 0 ? (
               <ul className="space-y-4">
@@ -782,9 +833,9 @@ export default function RecipeDetailPage() {
                       href={`/userprofile/${c.user.id}?username=${c.user.username}`}
                       className="shrink-0 relative"
                     >
-                      {c.user.profile_img && c.user.profile_img !== '<nil>' ? (
-                        <img 
-                          src={c.user.profile_img} 
+                      {c.user.profile_img && c.user.profile_img !== "<nil>" ? (
+                        <img
+                          src={c.user.profile_img}
                           alt={c.user.username}
                           className="w-10 h-10 rounded-full object-cover"
                         />
