@@ -9,7 +9,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import LogoutButton from "./LogoutButton";
 const menuItems = [
  
-  { name: "About", href: "#link" },
+  { name: "About", href: "#about" },
 ];
 
 export const HeroHeader = () => {
