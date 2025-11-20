@@ -1,5 +1,5 @@
 "use client";
-
+import type { PostResponse } from "@/types/post";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -25,6 +25,7 @@ import { HeroHeader2 } from "./hero8-head2";
 import { User } from "@/types/user";
 import { useAuth } from "@/app/context/AuthContext";
 import type { User as AppUser } from "@/types/user";
+import { toast } from "sonner";
 
 /** ---------- Local types (เข้มงวด, ไม่ใช้ any) ---------- */
 type CategorySlug =
@@ -51,6 +52,7 @@ interface ApiPost {
   ingredient_names?: string[];
   ingredients?: Array<string | number>;
   instructions?: Array<string | number>;
+  star?: number;
 }
 
 interface ApiOwner {
@@ -161,6 +163,36 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
   return Array.from(new Set(namesFromStrings));
 };
 
+function buildRecipeFromApi(p: ApiPost, u: ApiOwner | undefined): Recipe {
+  const catSlugs: CategorySlug[] = (
+    Array.isArray(p.categories_tags) ? p.categories_tags : []
+  )
+    .map((v: number | string) =>
+      typeof v === "number" ? CATEGORY_ID_TO_SLUG[v] : labelToSlug(String(v))
+    )
+    .filter(Boolean) as CategorySlug[];
+
+  return {
+    id: String(p.post_id),
+    title: p.menu_name ?? "Untitled",
+    description: p.story ?? "",
+    image: p.image_url ?? "/default-image.png",
+    author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
+    rating: typeof p.star === "number" ? p.star : 0, // ⭐ ดึงจาก BE
+    totalRatings: 0,
+    cookTime: "30 mins",
+    servings: 1,
+    categories: catSlugs,
+    ingredients: Array.isArray(p.ingredients) ? p.ingredients.map(String) : [],
+    ingredientsTags: normalizeIngredientTags(p),
+    instructions: Array.isArray(p.instructions)
+      ? p.instructions.map(String)
+      : [],
+    createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
+    comments: [],
+  };
+}
+
 type JwtPayload = {
   user_id?: number | string;
   id?: number | string;
@@ -202,6 +234,7 @@ function getCurrentUserId(
 
 export default function RecipeDetailPage() {
   const { user: authUser, token } = useAuth();
+  const API = process.env.NEXT_PUBLIC_API_BASE!;
   const myUserId = useMemo(
     () => getCurrentUserId(authUser, token),
     [authUser, token]
@@ -220,7 +253,26 @@ export default function RecipeDetailPage() {
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  console.log("token : ", token);
+
+  const reloadRecipe = async (postId: string) => {
+    try {
+      const res = await fetch(`${API}/getpostbypostid/${postId}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const p: ApiPost = data.post;
+      const u: ApiOwner | undefined = data.owner_post;
+      if (!p) return;
+
+      const mapped = buildRecipeFromApi(p, u);
+      setRecipe(mapped);
+    } catch (err) {
+      console.error("Failed to reload recipe after rating:", err);
+    }
+  };
+
   useEffect(() => {
   const fetchRecipe = async () => {
     try {
@@ -325,7 +377,7 @@ export default function RecipeDetailPage() {
 
   const toggleFavorite = async () => {
     if (!token) {
-      alert("Please login to save posts");
+      toast.error("Please login to save posts");
       return;
     }
 
@@ -362,7 +414,7 @@ export default function RecipeDetailPage() {
       }
     } catch (error) {
       console.error("Failed to toggle favorite:", error);
-      alert("Failed to save post. Please try again.");
+      toast.error("Failed to save post. Please try again.");
     } finally {
       setFavoriteLoading(false);
     }
@@ -391,7 +443,13 @@ export default function RecipeDetailPage() {
     );
   }
 
-  const handleRating = (rating: number) => {
+  const handleRating = async (rating: number) => {
+    if (!token) {
+      toast.error("Please login to rate this recipe");
+      return;
+    }
+    if (!recipe) return;
+
     setUserRating(rating);
   };
 
@@ -515,7 +573,9 @@ export default function RecipeDetailPage() {
               } ${favoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               aria-label={isFavorited ? "Unfavorite" : "Favorite"}
             >
-              <Heart className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`} />
+              <Heart
+                className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`}
+              />
             </button>
           </div>
 
@@ -531,7 +591,7 @@ export default function RecipeDetailPage() {
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
-            <p className="text-gray-600 mb-4">{recipe.description}</p>
+            <p className="text-gray-600 dark:text-amber-50 mb-4">{recipe.description}</p>
 
             {/* Ingredient Tags */}
             {(recipe.ingredientsTags?.length ?? 0) > 0 && (
@@ -568,7 +628,7 @@ export default function RecipeDetailPage() {
                   );
                 })}
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 md:flex md:items-center md:gap-6">
+              <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 dark:text-white md:flex md:items-center md:gap-6">
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" /> {recipe.cookTime}
                 </span>
@@ -590,11 +650,18 @@ export default function RecipeDetailPage() {
             <CardTitle>Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc pl-6 space-y-1">
+          <div className="space-y-4">
               {recipe.ingredients.map((ing, idx) => (
-                <li key={idx}>{ing}</li>
+                <div key={idx} className="flex space-x-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className=" leading-relaxed">{ing}</p>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </CardContent>
         </Card>
 
@@ -611,7 +678,7 @@ export default function RecipeDetailPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className=" leading-relaxed">
                       {instruction}
                     </p>
                   </div>

@@ -15,5 +15,7 @@ export interface PostResponse {
     ingredients_tags?: string[];
     ingredients?: string[];
     instructions?: string[];
+    star?: number;
+
   };
 }
