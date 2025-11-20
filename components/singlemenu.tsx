@@ -1,5 +1,3 @@
-//single menu detail page
-// components/RecipeDetailPage.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -67,6 +65,21 @@ interface ApiEnvelope {
   post?: ApiPost;
 }
 
+// Add this interface near the top with your other types
+interface CommentUser {
+  id: number;
+  username: string;
+  profile_img?: string; // ✅ Make it optional
+}
+
+interface RecipeComment {
+  id: number | string; // ✅ Allow both number and string
+  text: string;
+  user: CommentUser;
+  createdAt: string;
+}
+
+
 /** ---------- UI config ---------- */
 type CategoryItem = {
   id: CategorySlug;
@@ -125,14 +138,12 @@ const labelToSlug = (s: string): CategorySlug =>
 
 /** ---------- Helpers (typed) ---------- */
 const normalizeIngredientTags = (p: ApiPost): string[] => {
-  // ถ้ามีชื่อมาอยู่แล้ว (เช่น ตอนสร้างโพสต์) ก็ใช้เลย
   if (Array.isArray(p.ingredient_names) && p.ingredient_names.length > 0) {
     return Array.from(new Set(p.ingredient_names.filter(Boolean)));
   }
 
   const raw = Array.isArray(p.ingredients_tags) ? p.ingredients_tags : [];
 
-  // แปลงกรณีเป็นหมายเลข id
   const numericIds: number[] = raw
     .map((v) =>
       typeof v === "number" ? v : /^\d+$/.test(String(v)) ? Number(v) : NaN
@@ -146,7 +157,6 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
     return Array.from(new Set(names));
   }
 
-  // กรณีเป็น string ชื่ออยู่แล้ว
   const namesFromStrings = raw.map((v) => String(v).trim()).filter(Boolean);
   return Array.from(new Set(namesFromStrings));
 };
@@ -210,83 +220,108 @@ export default function RecipeDetailPage() {
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  console.log("token : ", token);
   useEffect(() => {
-    const fetchRecipe = async () => {
-      try {
-        const API = process.env.NEXT_PUBLIC_API_BASE!;
-        const res = await fetch(`${API}/getpostbypostid/${id}`, {
-          cache: "no-store",
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to fetch");
+  const fetchRecipe = async () => {
+    try {
+      const API = process.env.NEXT_PUBLIC_API_BASE!;
+      
+      // ✅ Create headers conditionally
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      // Fetch recipe and comments in parallel (guests can see both)
+      const [recipeRes, commentsRes] = await Promise.all([
+        fetch(`${API}/getpostbypostid/${id}`, { headers }),
+        fetch(`${API}/getcommentsbypostid/${id}`, { headers })
+      ]);
 
-        const p = data.post;
-        const u = data.owner_post;
-        if (!p) throw new Error("No recipe found");
+      const data = await recipeRes.json();
+      if (!recipeRes.ok) throw new Error(data.message || "Failed to fetch");
 
-        const catSlugs: CategorySlug[] = (
-          Array.isArray(p.categories_tags) ? p.categories_tags : []
+      const p = data.post;
+      const u = data.owner_post;
+      if (!p) throw new Error("No recipe found");
+
+      const catSlugs: CategorySlug[] = (
+        Array.isArray(p.categories_tags) ? p.categories_tags : []
+      )
+        .map((v: number | string) =>
+          typeof v === "number"
+            ? CATEGORY_ID_TO_SLUG[v]
+            : labelToSlug(String(v))
         )
-          .map((v: number | string) =>
-            typeof v === "number"
-              ? CATEGORY_ID_TO_SLUG[v]
-              : labelToSlug(String(v))
-          )
-          .filter(Boolean) as CategorySlug[];
+        .filter(Boolean) as CategorySlug[];
 
-        const mapped: Recipe = {
-          id: String(p.post_id),
-          title: p.menu_name ?? "Untitled",
-          description: p.story ?? "",
-          image: p.image_url ?? "/default-image.png",
-          author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
-          rating: 4.5,
-          totalRatings: 0,
-          cookTime: "30 นาที",
-          servings: 1,
-          categories: catSlugs,
-          ingredients: Array.isArray(p.ingredients)
-            ? p.ingredients.map(String)
-            : [],
-          ingredientsTags: normalizeIngredientTags(p),
-          instructions: Array.isArray(p.instructions)
-            ? p.instructions.map(String)
-            : [],
-          createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
-          comments: [],
-        };
-        setRecipe(mapped);
+      // Get comments
+      let comments = [];
+      if (commentsRes.ok) {
+        const commentsData = await commentsRes.json();
+        console.log("Comments data from API:", commentsData);
         
-
-        // Check if already favorited
-        if (token) {
-          try {
-            const favRes = await fetch(`${API}/api/getallfavoritepost`, {
-              headers: { Authorization: `Bearer ${token}` },
-              cache: "no-store",
-            });
-            if (favRes.ok) {
-              const favData = await favRes.json();
-              const posts = favData.posts || [];
-              const isAlreadyFavorited = posts.some(
-                (item: any) => String(item.post.post_id) === String(id)
-              );
-              setIsFavorited(isAlreadyFavorited);
-            }
-          } catch (err) {
-            console.error("Failed to check favorite status:", err);
-          }
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoading(false);
+        comments = (commentsData.comments || []).map((c: any) => ({
+          id: c.comment_id,
+          text: c.content,
+          user: {
+            id: c.user_id,
+            username: c.username,
+            profile_img: (c.profile_img && c.profile_img !== '<nil>' && c.profile_img !== 'null') 
+              ? c.profile_img 
+              : ""
+          },
+          createdAt: c.created_at
+        }));
       }
-    };
 
-    if (id) fetchRecipe();
-  }, [id, token]);
+      const mapped: Recipe = {
+        id: String(p.post_id),
+        title: p.menu_name ?? "Untitled",
+        description: p.story ?? "",
+        image: p.image_url ?? "/default-image.png",
+        author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
+        rating: 4.5,
+        totalRatings: 0,
+        cookTime: "30 นาที",
+        servings: 1,
+        categories: catSlugs,
+        ingredients: Array.isArray(p.ingredients)
+          ? p.ingredients.map(String)
+          : [],
+        ingredientsTags: normalizeIngredientTags(p),
+        instructions: Array.isArray(p.instructions)
+          ? p.instructions.map(String)
+          : [],
+        createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
+        comments: comments,
+      };
+      setRecipe(mapped);
+
+      // Check if already favorited (only for logged in users)
+      if (token) {
+        try {
+          const favRes = await fetch(`${API}/api/getallfavoritepost`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            const posts = favData.posts || [];
+            const isAlreadyFavorited = posts.some(
+              (item: any) => String(item.post.post_id) === String(id)
+            );
+            setIsFavorited(isAlreadyFavorited);
+          }
+        } catch (err) {
+          console.error("Failed to check favorite status:", err);
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (id) fetchRecipe();
+}, [id, token]); // ✅ Keep token in dependencies
 
   const toggleFavorite = async () => {
     if (!token) {
@@ -360,22 +395,92 @@ export default function RecipeDetailPage() {
     setUserRating(rating);
   };
 
-  const handleCommentSubmit = async (e: React.FormEvent) => {
+  const handleCommentSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    
+    // ✅ Get the comment value from the form
+    const formData = new FormData(e.currentTarget);
+    const commentText = formData.get('comment') as string;
+    
+    if (!commentText?.trim()) {
+      alert("Please write a comment");
+      return;
+    }
+    
+    if (!token) {
+      alert("Please login to comment");
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setComment("");
+    
+    try {
+      const API = process.env.NEXT_PUBLIC_API_BASE!;
+      
+      // ✅ Send as form-data to match backend
+      const submitData = new FormData();
+      submitData.append('post_id', id);
+      submitData.append('content', commentText.trim());
+      
+      const res = await fetch(`${API}/api/addcomment`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: submitData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to post comment");
+      }
+
+      const data = await res.json();
+      console.log("Comment posted response:", data);
+
+      // ✅ Add the new comment to the UI immediately
+      if (recipe && authUser) {
+        const newComment = {
+          id: Date.now(),
+          text: commentText.trim(),
+          user: {
+            id: myUserId || 0,
+            username: authUser.username || "You",
+            profile_img: (authUser as any).profile_img || (authUser as any).image_url || ""
+          },
+          createdAt: new Date().toLocaleString("sv-SE", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+          }).replace("T", " "),
+        };
+        
+        setRecipe({
+          ...recipe,
+          comments: [newComment, ...recipe.comments],
+        });
+      }
+
+      // ✅ Reset the form
+      e.currentTarget.reset();
+      
+    } catch (error) {
+      console.error("Failed to post comment:", error);
+      alert("Failed to post comment. Please try again.");
+    } finally {
       setIsSubmitting(false);
-    }, 800);
+    }
   };
 
   const profileHref =
     myUserId != null && Number(recipe.author.id) === myUserId
       ? "/profile"
       : `/userprofile/${recipe.author.id}`;
-    console.log("Recipe:", recipe);
-    console.log("author info : "+ recipe.author);
+
   return (
     <>
       <HeroHeader2 />
@@ -386,7 +491,7 @@ export default function RecipeDetailPage() {
             <Link
               href={{pathname : profileHref, query: { username: recipe.author.username }}}
               className="flex items-center space-x-3 p-1 group"
-              aria-label={`go to profile ${recipe.author.username}`}
+              aria-label={`Go to ${recipe.author.username}'s profile`}
             >
               <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-lg transition">
                 {recipe.author.username[0]}
@@ -547,49 +652,77 @@ export default function RecipeDetailPage() {
             <CardTitle>Comments ({recipe.comments.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCommentSubmit} className="space-y-4 mb-4">
-              <Textarea
-                placeholder="Comment..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <Button type="submit" disabled={isSubmitting || !comment.trim()}>
-                {isSubmitting ? "Posting..." : "Post"}
-              </Button>
-            </form>
-            <ul className="space-y-4">
-              {recipe.comments.map((c) => (
-                <li key={c.id} className="flex gap-3">
-                  {/* Avatar */}
-                  <Link
-                    href={`/userprofile/${c.user.username}`}
-                    className="shrink-0 relative"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-yellow-400 text-white font-bold grid place-items-center">
-                      {c.user.username[0]}
-                    </div>
-                  </Link>
+            {token ? (
+              // ✅ Form handles submission
+              <form onSubmit={handleCommentSubmit} className="space-y-4 mb-4">
+                <Textarea
+                  placeholder="Write a comment..."
+                  defaultValue={comment} // ✅ Use defaultValue instead of value
+                  name="comment" // ✅ Add name attribute
+                />
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Posting..." : "Post Comment"}
+                </Button>
+              </form>
+            ) : (
+              // ✅ Show login prompt for guests
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                <p className="text-sm text-gray-600 mb-3">
+                  Please log in to leave a comment
+                </p>
+                <Link href="/login">
+                  <Button className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                    Log In to Comment
+                  </Button>
+                </Link>
+              </div>
+            )}
+            
+            {/* ✅ Comments list - visible to everyone */}
+            {recipe.comments.length > 0 ? (
+              <ul className="space-y-4">
+                {recipe.comments.map((c) => (
+                  <li key={c.id} className="flex gap-3">
+                    <Link
+                      href={`/userprofile/${c.user.id}`}
+                      className="shrink-0 relative"
+                    >
+                      {c.user.profile_img && c.user.profile_img !== '<nil>' ? (
+                        <img 
+                          src={c.user.profile_img} 
+                          alt={c.user.username}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-yellow-400 text-white font-bold grid place-items-center">
+                          {c.user.username[0].toUpperCase()}
+                        </div>
+                      )}
+                    </Link>
 
-                  {/* Comment content */}
-                  <div className="flex-1">
-                    <div className="inline-block rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
-                      <Link
-                        href={`/userprofile/${c.user.id}`}
-                        className="font-semibold inline-block"
-                      >
-                        {c.user.username}
-                      </Link>
-                      <p className="leading-relaxed">{c.text}</p>
-                    </div>
+                    <div className="flex-1">
+                      <div className="inline-block rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
+                        <Link
+                          href={`/userprofile/${c.user.id}`}
+                          className="font-semibold inline-block hover:underline"
+                        >
+                          {c.user.username}
+                        </Link>
+                        <p className="leading-relaxed mt-1">{c.text}</p>
+                      </div>
 
-                    {/* Time */}
-                    <div className="text-xs text-gray-500 mt-1">
-                      {c.createdAt}
+                      <div className="text-xs text-gray-500 mt-1 px-2">
+                        {c.createdAt}
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No comments yet. Be the first to comment!
+              </p>
+            )}
           </CardContent>
         </Card>
       </main>

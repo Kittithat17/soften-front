@@ -1,11 +1,11 @@
 import { User } from "./user";
 
 export interface Comment {
-    id: string;
-    user: User;
-    text: string;
-    createdAt: string;
-  }
+  id: number | string;
+  text: string;
+  user: User;
+  createdAt: string;
+}
   
   export interface Recipe {
     id: string;
