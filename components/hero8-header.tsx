@@ -8,9 +8,7 @@ import { ModeToggle } from "./mode-toggle";
 import { useAuth } from "@/app/context/AuthContext";
 import LogoutButton from "./LogoutButton";
 const menuItems = [
-  { name: "Features", href: "#link" },
-  { name: "Solution", href: "#link" },
-  { name: "Pricing", href: "#link" },
+ 
   { name: "About", href: "#link" },
 ];
 
