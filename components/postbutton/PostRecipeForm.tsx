@@ -10,7 +10,6 @@ import {
   EyeOff,
   Clock,
   Users,
-  Send,
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -20,7 +19,19 @@ import { useRouter } from "next/navigation";
 interface PostRecipeFormProps {
   isOpen: boolean;
   onClose: () => void;
+  mode?: "create" | "edit";
+  postId?: string | number;
+  initialRecipe?: {
+    title: string;
+    description: string;
+    categories: string[];
+    ingredients: string[];
+    ingredientTags: string[];
+    instructions: string[];
+  };
+  onSaved?: () => void;
 }
+
 const INGREDIENT_NAME_TO_ID: Record<string, number> = {
   // ----- 1: Vegetable -----
   vegetable: 1,
@@ -252,9 +263,6 @@ const CATEGORY_ID_MAP: Record<CategoryTag, number> = {
   Noodles: 11,
   Rice: 12,
 };
-const CATEGORY_ID_TO_NAME: Record<number, CategoryTag> = Object.fromEntries(
-  Object.entries(CATEGORY_ID_MAP).map(([name, id]) => [id, name as CategoryTag])
-) as Record<number, CategoryTag>;
 
 const INGREDIENT_ID_TO_NAME: Record<number, string> = {
   1: "Vegetable",
@@ -279,13 +287,18 @@ const INGREDIENT_ID_TO_NAME: Record<number, string> = {
   20: "Alcohol",
 };
 
-
 export default function PostRecipeForm({
   isOpen,
   onClose,
+  mode = "create",
+  postId,
+  initialRecipe,
+  onSaved,
 }: PostRecipeFormProps) {
   const { token } = useAuth();
   const router = useRouter();
+
+  const isEditMode = mode === "edit" && !!postId;
 
   const [ingredientTags, setIngredientTags] = useState<string[]>([]);
   const [ingredientTagInput, setIngredientTagInput] = useState("");
@@ -299,6 +312,26 @@ export default function PostRecipeForm({
     instructions: [""],
     image: null as File | null,
   });
+  useEffect(() => {
+    if (isEditMode && initialRecipe) {
+      setFormData((prev) => ({
+        ...prev,
+        title: initialRecipe.title,
+        description: initialRecipe.description,
+        categories: (initialRecipe.categories as CategoryTag[]) || ["One-dish"],
+        ingredients:
+          initialRecipe.ingredients.length > 0
+            ? initialRecipe.ingredients
+            : [""],
+        instructions:
+          initialRecipe.instructions.length > 0
+            ? initialRecipe.instructions
+            : [""],
+      }));
+
+      setIngredientTags(initialRecipe.ingredientTags || []);
+    }
+  }, [isEditMode, initialRecipe]);
   // helper
   const norm = (s: string) => s.trim().replace(/\s+/g, " ");
   const addIngredientTag = (raw?: string) => {
@@ -395,7 +428,12 @@ export default function PostRecipeForm({
 
     const body = new FormData();
     body.append("menu_name", formData.title);
-    body.append("Details", formData.description.trim());
+    if (isEditMode) {
+      body.append("story", formData.description.trim());   // EditPostByPostID ใช้ "story"
+    } else {
+      body.append("Details", formData.description.trim()); // CreatePost ใช้ "Details"
+    }
+    
     body.append("categories_tags", JSON.stringify(categoryIds));
     body.append("ingredients_tags", JSON.stringify(ingredientTagIds));
     body.append("ingredients", JSON.stringify(cleanedIngredients));
@@ -404,19 +442,30 @@ export default function PostRecipeForm({
 
     try {
       setLoading(true);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE}/api/createpost`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body,
-        }
-      );
+
+      const API = process.env.NEXT_PUBLIC_API_BASE!;
+      const url = isEditMode
+        ? `${API}/api/editpost/${postId}`
+        : `${API}/api/createpost`;
+      const method = isEditMode ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body,
+      });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Post failed");
+
+      if (isEditMode) {
+        toast.success("Post updated successfully");
+        onSaved?.(); // ให้ parent reload post ถ้าส่ง callback มา
+        onClose();
+        return;
+      }
 
       toast.success("Shared successfully!");
       const createdPayload = {

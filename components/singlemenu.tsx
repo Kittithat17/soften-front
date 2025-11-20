@@ -1,9 +1,19 @@
 "use client";
-import type { PostResponse } from "@/types/post";
+
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Clock, Users, Star, Heart, LucideIcon } from "lucide-react";
+
+import {
+  Clock,
+  Users,
+  Star,
+  Heart,
+  LucideIcon,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +36,8 @@ import { User } from "@/types/user";
 import { useAuth } from "@/app/context/AuthContext";
 import type { User as AppUser } from "@/types/user";
 import { toast } from "sonner";
+import PostRecipeForm from "./postbutton/PostRecipeForm";
+// 🔥 ใช้ฟอร์มแก้โพสต์
 
 /** ---------- Local types (เข้มงวด, ไม่ใช้ any) ---------- */
 type CategorySlug =
@@ -54,10 +66,10 @@ interface ApiPost {
   instructions?: Array<string | number>;
   star?: number;
 }
+
 interface ApiFavoriteItem {
   post: {
     post_id: number | string;
-    // ถ้ามี field อื่น ๆ ก็เพิ่มได้ แต่เอาเท่าที่ใช้ก็พอ
   };
 }
 
@@ -68,17 +80,13 @@ interface ApiOwner {
   created_time?: string;
 }
 
-interface ApiEnvelope {
-  owner_post?: ApiOwner;
-  post?: ApiPost;
-}
-
 // Add this interface near the top with your other types
 interface CommentUser {
   id: number;
   username: string;
-  profile_img?: string; // ✅ Make it optional
+  profile_img?: string;
 }
+
 interface ApiComment {
   comment_id: number | string;
   content: string;
@@ -86,13 +94,6 @@ interface ApiComment {
   username: string;
   profile_img?: string | null;
   created_at: string;
-}
-
-interface RecipeComment {
-  id: number | string; // ✅ Allow both number and string
-  text: string;
-  user: CommentUser;
-  createdAt: string;
 }
 
 /** ---------- UI config ---------- */
@@ -117,6 +118,21 @@ const categories: CategoryItem[] = [
   { id: "noodles", name: "noodles", icon: Soup, color: "bg-orange-500" },
   { id: "rice", name: "Rice", icon: ChefHat, color: "bg-yellow-600" },
 ];
+// slug จาก backend -> label ที่ใช้ในฟอร์ม (CATEGORY_TAGS)
+const SLUG_TO_CATEGORY_LABEL: Record<CategorySlug, string> = {
+  "one-dish": "One-dish",
+  spicy: "Spicy",
+  quick: "Quick(<15 min)",
+  vegetarian: "Vegetarian",
+  healthy: "Healthy",
+  drinks: "Drinks",
+  snacks: "Snacks",
+  dessert: "Dessert",
+  halal: "Halal",
+  seafood: "Seafood",
+  noodles: "Noodles",
+  rice: "Rice",
+};
 
 const CATEGORY_ID_TO_SLUG: Record<number, CategorySlug> = {
   1: "one-dish",
@@ -155,7 +171,6 @@ const INGREDIENT_ID_TO_NAME: Record<number, string> = {
   19: "Baking Ingredient",
   20: "Alcohol",
 };
-
 
 const labelToSlug = (s: string): CategorySlug =>
   s
@@ -258,8 +273,28 @@ function getCurrentUserId(
 }
 
 export default function RecipeDetailPage() {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user: authUser, token } = useAuth();
   const API = process.env.NEXT_PUBLIC_API_BASE!;
+  const router = useRouter();
+  const params = useParams();
+  const id = params?.id as string;
+
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const myUserId = useMemo(
+    () => getCurrentUserId(authUser, token),
+    [authUser, token]
+  );
+
   const getProfileImageFromUser = (
     user: AppUser | null | undefined
   ): string => {
@@ -278,28 +313,8 @@ export default function RecipeDetailPage() {
         return u.image_url;
       }
     }
-
     return "";
   };
-
-  const myUserId = useMemo(
-    () => getCurrentUserId(authUser, token),
-    [authUser, token]
-  );
-
-  const params = useParams();
-  const id = params?.id as string;
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Favorite functionality states
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
-
-  const [userRating, setUserRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const reloadRecipe = async (postId: string) => {
     try {
@@ -314,7 +329,11 @@ export default function RecipeDetailPage() {
       if (!p) return;
 
       const mapped = buildRecipeFromApi(p, u);
-      setRecipe(mapped);
+
+      // ✅ อย่าให้ comments หายตอน reload rating
+      setRecipe((prev) =>
+        prev ? { ...mapped, comments: prev.comments } : mapped
+      );
     } catch (err) {
       console.error("Failed to reload recipe after rating:", err);
     }
@@ -325,12 +344,10 @@ export default function RecipeDetailPage() {
       try {
         const API = process.env.NEXT_PUBLIC_API_BASE!;
 
-        // ✅ Create headers conditionally
         const headers: HeadersInit = token
           ? { Authorization: `Bearer ${token}` }
           : {};
 
-        // Fetch recipe and comments in parallel (guests can see both)
         const [recipeRes, commentsRes] = await Promise.all([
           fetch(`${API}/getpostbypostid/${id}`, { headers }),
           fetch(`${API}/getcommentsbypostid/${id}`, { headers }),
@@ -339,28 +356,15 @@ export default function RecipeDetailPage() {
         const data = await recipeRes.json();
         if (!recipeRes.ok) throw new Error(data.message || "Failed to fetch");
 
-        const p = data.post;
-        const u = data.owner_post;
+        const p: ApiPost = data.post;
+        const u: ApiOwner | undefined = data.owner_post;
         if (!p) throw new Error("No recipe found");
 
-        const catSlugs: CategorySlug[] = (
-          Array.isArray(p.categories_tags) ? p.categories_tags : []
-        )
-          .map((v: number | string) =>
-            typeof v === "number"
-              ? CATEGORY_ID_TO_SLUG[v]
-              : labelToSlug(String(v))
-          )
-          .filter(Boolean) as CategorySlug[];
-
-        // Get comments
         let comments: Recipe["comments"] = [];
 
         if (commentsRes.ok) {
           const commentsData: { comments?: ApiComment[] } =
             await commentsRes.json();
-          console.log("Comments data from API:", commentsData);
-
           comments = (commentsData.comments ?? []).map(
             (c): Recipe["comments"][number] => ({
               id: c.comment_id,
@@ -374,38 +378,16 @@ export default function RecipeDetailPage() {
                   c.profile_img !== "null"
                     ? c.profile_img
                     : "",
-              } as User, // ใช้ User จาก "@/types/user"
+              } as User,
               createdAt: c.created_at,
             })
           );
-          
-          
         }
 
-        const mapped: Recipe = {
-          id: String(p.post_id),
-          title: p.menu_name ?? "Untitled",
-          description: p.story ?? "",
-          image: p.image_url ?? "/default-image.png",
-          author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
-          rating: 4.5,
-          totalRatings: 0,
-          cookTime: "30 นาที",
-          servings: 1,
-          categories: catSlugs,
-          ingredients: Array.isArray(p.ingredients)
-            ? p.ingredients.map(String)
-            : [],
-          ingredientsTags: normalizeIngredientTags(p),
-          instructions: Array.isArray(p.instructions)
-            ? p.instructions.map(String)
-            : [],
-          createdAt: `${u?.created_date ?? ""} ${u?.created_time ?? ""}`,
-          comments: comments,
-        };
+        const mapped = buildRecipeFromApi(p, u);
+        mapped.comments = comments;
         setRecipe(mapped);
 
-        // Check if already favorited (only for logged in users)
         if (token) {
           try {
             const favRes = await fetch(`${API}/api/getallfavoritepost`, {
@@ -432,7 +414,7 @@ export default function RecipeDetailPage() {
     };
 
     if (id) fetchRecipe();
-  }, [id, token]); // ✅ Keep token in dependencies
+  }, [id, token]);
 
   const toggleFavorite = async () => {
     if (!token) {
@@ -442,10 +424,7 @@ export default function RecipeDetailPage() {
 
     setFavoriteLoading(true);
     try {
-      const API = process.env.NEXT_PUBLIC_API_BASE!;
-
       if (isFavorited) {
-        // Unfavorite
         const res = await fetch(`${API}/api/unfavoritepost/${id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -453,12 +432,10 @@ export default function RecipeDetailPage() {
 
         if (res.ok) {
           setIsFavorited(false);
-          console.log("Unfavorited successfully");
         } else {
           throw new Error("Failed to unfavorite");
         }
       } else {
-        // Favorite
         const res = await fetch(`${API}/api/favoritepost/${id}`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -466,7 +443,6 @@ export default function RecipeDetailPage() {
 
         if (res.ok) {
           setIsFavorited(true);
-          console.log("Favorited successfully");
         } else {
           throw new Error("Failed to favorite");
         }
@@ -531,7 +507,6 @@ export default function RecipeDetailPage() {
         return;
       }
 
-      // ✅ ยิงสำเร็จแล้ว → reload post เพื่อดึง avg rating ล่าสุดจาก DB
       await reloadRecipe(recipe.id);
     } catch (err) {
       console.error("Error while rating:", err);
@@ -541,11 +516,7 @@ export default function RecipeDetailPage() {
 
   const handleCommentSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // ✅ Store form reference BEFORE async operations
     const form = e.currentTarget;
-
-    // ✅ Get the comment value from the form
     const formData = new FormData(form);
     const commentText = formData.get("comment") as string;
 
@@ -562,8 +533,6 @@ export default function RecipeDetailPage() {
     setIsSubmitting(true);
 
     try {
-      const API = process.env.NEXT_PUBLIC_API_BASE!;
-
       const submitData = new FormData();
       submitData.append("post_id", id);
       submitData.append("content", commentText.trim());
@@ -581,11 +550,10 @@ export default function RecipeDetailPage() {
         throw new Error(errorData.message || "Failed to post comment");
       }
 
-      const data = await res.json();
-      console.log("Comment posted response:", data);
+      await res.json(); // ถ้าอยากใช้ response ต่อ ก็เก็บไว้ได้
 
       if (recipe && authUser) {
-        const newComment = {
+        const newComment: Recipe["comments"][number] = {
           id: Date.now(),
           text: commentText.trim(),
           user: {
@@ -612,7 +580,6 @@ export default function RecipeDetailPage() {
         });
       }
 
-      // ✅ Reset the form using stored reference
       form.reset();
     } catch (error) {
       console.error("Failed to post comment:", error);
@@ -627,6 +594,43 @@ export default function RecipeDetailPage() {
       ? "/profile"
       : `/userprofile/${recipe.author.id}`;
 
+  const canEdit =
+    myUserId != null && Number(recipe.author.id) === Number(myUserId);
+
+  const handleEditClick = () => {
+    if (!canEdit) return;
+    setShowActions(false);
+    setIsEditOpen(true); // 🔥 เปิด modal
+  };
+
+  const handleDeleteClick = async () => {
+    if (!canEdit || !token) return;
+
+    const ok = window.confirm("Are you sure you want to delete?");
+    if (!ok) return;
+
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`${API}/api/deletepost/${recipe.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.message || "Failed to delete post");
+        return;
+      }
+
+      toast.success("Post deleted");
+      router.push("/Menu");
+    } catch (err) {
+      toast.error("Error deleting post");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
       <HeroHeader2 />
@@ -634,18 +638,18 @@ export default function RecipeDetailPage() {
         {/* Author Header */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
+            {/* LEFT: Author */}
             <Link
               href={{
                 pathname: profileHref,
                 query: { username: recipe.author.username },
               }}
               className="flex items-center space-x-3 p-1 group"
-              aria-label={`Go to ${recipe.author.username}'s profile`}
             >
-              <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-lg transition">
+              <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-lg">
                 {recipe.author.username[0]}
               </div>
-              <div className="cursor-pointer">
+              <div>
                 <p className="text-sm font-semibold">
                   {recipe.author.username}
                 </p>
@@ -653,21 +657,55 @@ export default function RecipeDetailPage() {
               </div>
             </Link>
 
-            {/* Favorite Button */}
-            <button
-              onClick={toggleFavorite}
-              disabled={favoriteLoading}
-              className={`p-3 rounded-full transition-all ${
-                isFavorited
-                  ? "bg-red-100 text-red-500"
-                  : "bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
-              } ${favoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-              aria-label={isFavorited ? "Unfavorite" : "Favorite"}
-            >
-              <Heart
-                className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`}
-              />
-            </button>
+            {/* RIGHT: Favorite + Edit/Delete กลุ่มรวม */}
+            <div className="flex items-center gap-2">
+              {/* Favorite Button */}
+              <button
+                onClick={toggleFavorite}
+                disabled={favoriteLoading}
+                className={`p-3 rounded-full transition-all ${
+                  isFavorited
+                    ? "bg-red-100 text-red-500"
+                    : "bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
+                } ${favoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <Heart
+                  className={`h-6 w-6 ${isFavorited ? "fill-current" : ""}`}
+                />
+              </button>
+
+              {/* Edit/Delete */}
+              {canEdit && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowActions(!showActions)}
+                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </button>
+
+                  {showActions && (
+                    <div className="absolute right-0 mt-2 w-36 rounded-lg border bg-white shadow-lg z-10">
+                      <button
+                        onClick={handleEditClick}
+                        className="flex items-center gap-2 px-3 py-2 w-full hover:bg-gray-100 text-left"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={handleDeleteClick}
+                        className="flex items-center gap-2 px-3 py-2 w-full hover:bg-red-50 text-red-600 text-left"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Image */}
@@ -750,7 +788,7 @@ export default function RecipeDetailPage() {
                     {idx + 1}
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className=" leading-relaxed">{ing}</p>
+                    <p className="leading-relaxed">{ing}</p>
                   </div>
                 </div>
               ))}
@@ -771,7 +809,7 @@ export default function RecipeDetailPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className=" leading-relaxed">{instruction}</p>
+                    <p className="leading-relaxed">{instruction}</p>
                   </div>
                 </div>
               ))}
@@ -811,19 +849,13 @@ export default function RecipeDetailPage() {
           </CardHeader>
           <CardContent>
             {token ? (
-              // ✅ Form handles submission
               <form onSubmit={handleCommentSubmit} className="space-y-4 mb-4">
-                <Textarea
-                  placeholder="Write a comment..."
-                  defaultValue={comment} // ✅ Use defaultValue instead of value
-                  name="comment" // ✅ Add name attribute
-                />
+                <Textarea placeholder="Write a comment..." name="comment" />
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Posting..." : "Post Comment"}
                 </Button>
               </form>
             ) : (
-              // ✅ Show login prompt for guests
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
                 <p className="text-sm text-gray-600 mb-3">
                   Please log in to leave a comment
@@ -836,7 +868,6 @@ export default function RecipeDetailPage() {
               </div>
             )}
 
-            {/* ✅ Comments list - visible to everyone */}
             {recipe.comments.length > 0 ? (
               <ul className="space-y-4">
                 {recipe.comments.map((c) => (
@@ -884,6 +915,26 @@ export default function RecipeDetailPage() {
           </CardContent>
         </Card>
       </main>
+
+      {recipe && (
+        <PostRecipeForm
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          mode="edit"
+          postId={recipe.id}
+          initialRecipe={{
+            title: recipe.title,
+            description: recipe.description,
+            categories: recipe.categories
+              .map((slug) => SLUG_TO_CATEGORY_LABEL[slug as CategorySlug])
+              .filter(Boolean),
+            ingredients: recipe.ingredients,
+            ingredientTags: recipe.ingredientsTags ?? [],
+            instructions: recipe.instructions,
+          }}
+          onSaved={() => reloadRecipe(recipe.id)}
+        />
+      )}
     </>
   );
 }
