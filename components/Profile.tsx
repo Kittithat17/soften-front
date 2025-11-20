@@ -261,12 +261,14 @@ export default function Profile() {
                 <div className="grid grid-cols-3 gap-4 sm:gap-5">
                   {savedPosts.map((item) => (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={item.post.post_id}
-                      src={item.post.image_url}
-                      alt="savedpost"
-                      className="aspect-square w-full rounded-2xl object-cover"
-                    />
+                    <Link href= {`/Menu/${item.post.post_id}`} key={item.post.post_id}>
+                      <img
+                        key={item.post.post_id}
+                        src={item.post.image_url}
+                        alt="savedpost"
+                        className="aspect-square w-full rounded-2xl object-cover"
+                      />
+                    </Link>
                   ))}
                 </div>
               ) : (
