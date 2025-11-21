@@ -10,7 +10,7 @@ export default function PostButton() {
     const {  token } = useAuth();
     return(
         <>
-        {token? (
+        {token ? (
           <div>
             <button
               onClick={() => setIsPostFormOpen(true)}
