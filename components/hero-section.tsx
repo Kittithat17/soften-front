@@ -66,7 +66,7 @@ export default function HeroSection() {
                     variant="secondary"
                     className="bg-white/10 text-white hover:bg-white/20"
                   >
-                    <Link href="#menu">See Our Menu</Link>
+                    <Link href="/Menu">See Our Menu</Link>
                   </Button>
                 </div>
               </div>

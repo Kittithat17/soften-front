@@ -631,7 +631,7 @@ export default function PostRecipeForm({
               <button
                 type="button"
                 onClick={() => setIsPreviewMode(false)}
-                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-black"
               >
                 Edit
               </button>
@@ -990,7 +990,7 @@ function PreviewRecipeCard({
             <Clock className="w-4 h-4" /> {cookTime}
           </div>
           <div className="flex items-center gap-1">
-            <Users className="w-4 h-4" /> {servings} ที่
+            <Users className="w-4 h-4" /> {servings} servings
           </div>
           <div className="flex gap-2 flex-wrap mt-2">
             {ingredientNames.map((n) => (

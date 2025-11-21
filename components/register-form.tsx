@@ -29,6 +29,7 @@ export function RegisterForm({
     setError(null);
     setOk(null);
     setSubmitting(true);
+  
     try {
       const res = await fetch(`${API}/register`, {
         method: "POST",
@@ -40,21 +41,36 @@ export function RegisterForm({
           password,
         }),
       });
-
+  
       if (!res.ok) {
         let message = "Register failed";
+  
         try {
           const ct = res.headers.get("content-type") || "";
           if (ct.includes("application/json")) {
             const j = await res.json();
-            message = j?.message || message;
+  
+            // ดึงข้อความจาก key ต่าง ๆ ที่ backend ส่งมา
+            message =
+              j.message ||
+              j.Username ||
+              j.username ||
+              j.Email ||
+              j.email ||
+              j.Password ||
+              j.password ||
+              message;
           } else {
             message = await res.text();
           }
-        } catch {}
+        } catch {
+          // ถ้า parse json พัง ก็ใช้ message เดิมไป
+        }
+  
         throw new Error(message);
       }
-
+  
+      // ถ้า ok
       setOk("Registered! Please login.");
       setTimeout(() => router.replace("/Login"), 800);
     } catch (err: unknown) {
@@ -64,11 +80,13 @@ export function RegisterForm({
           : typeof err === "string"
           ? err
           : "Register failed";
-      setError(message);
+  
+      setError(message); // ⭐ ตรงนี้จะโชว์ข้อความจาก backend เลย เช่น "Password must contain at least 1 special character"
     } finally {
       setSubmitting(false);
     }
   };
+  
   return (
     <div className={cn("flex flex-col gap-6 pt-20", className)} {...props}>
       <Card className="overflow-hidden p-0">
