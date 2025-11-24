@@ -7,10 +7,10 @@ import { useAuth } from "@/app/context/AuthContext";
 
 export default function PostButton() {
     const [isPostFormOpen, setIsPostFormOpen] = useState(false);
-    const {  token } = useAuth();
+    const { user, token } = useAuth();
     return(
         <>
-        {token ? (
+        {token && user ? (
           <div>
             <button
               onClick={() => setIsPostFormOpen(true)}

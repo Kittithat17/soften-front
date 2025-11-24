@@ -636,7 +636,7 @@ export default function SearchPage() {
               {filteredRecipes.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-medium text-gray-900 mb-2">
+                  <h3 className="text-xl font-medium mb-2">
                     Not Found
                   </h3>
                   <p className="text-gray-500 mb-4">try again</p>

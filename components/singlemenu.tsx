@@ -79,13 +79,11 @@ interface ApiOwner {
   created_date?: string;
   created_time?: string;
 }
-
-// Add this interface near the top with your other types
-interface CommentUser {
-  id: number;
-  username: string;
-  profile_img?: string;
+interface RateScoreResponse {
+  rate: number | null;
 }
+// Add this interface near the top with your other types
+
 
 interface ApiComment {
   comment_id: number | string;
@@ -330,7 +328,7 @@ export default function RecipeDetailPage() {
 
       const mapped = buildRecipeFromApi(p, u);
 
-      // ✅ อย่าให้ comments หายตอน reload rating
+      // อย่าให้ comments หายตอน reload rating
       setRecipe((prev) =>
         prev ? { ...mapped, comments: prev.comments } : mapped
       );
@@ -390,9 +388,20 @@ export default function RecipeDetailPage() {
 
         if (token) {
           try {
-            const favRes = await fetch(`${API}/api/getallfavoritepost`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const authHeaders: HeadersInit = {
+              Authorization: `Bearer ${token}`,
+            };
+
+            const [favRes, rateRes] = await Promise.all([
+              fetch(`${API}/api/getallfavoritepost`, {
+                headers: authHeaders,
+              }),
+              fetch(`${API}/api/getratescore/${id}`, {
+                headers: authHeaders,
+              }),
+            ]);
+
+            // ===== เช็ค favorite เดิม =====
             if (favRes.ok) {
               const favData: { posts?: ApiFavoriteItem[] } =
                 await favRes.json();
@@ -402,8 +411,29 @@ export default function RecipeDetailPage() {
               );
               setIsFavorited(isAlreadyFavorited);
             }
+
+            // ===== ดึงคะแนนที่ user เคยกดไว้ =====
+            if (rateRes.ok) {
+              const rateJson: RateScoreResponse = await rateRes.json();
+              const rawRate = rateJson.rate;
+
+              let rateValue = 0;
+              if (typeof rawRate === "number") {
+                rateValue = rawRate;
+              } else if (
+                typeof rawRate === "string" &&
+                (rawRate as string).trim() !== ""
+              ) {
+                const parsed = Number(rawRate);
+                if (Number.isFinite(parsed)) {
+                  rateValue = parsed;
+                }
+              }
+
+              setUserRating(rateValue); // ⭐ ทำให้ดาวโชว์ค่าที่เคย rate
+            }
           } catch (err) {
-            console.error("Failed to check favorite status:", err);
+            console.error("Failed to check favorite / rate status:", err);
           }
         }
       } catch (e) {
@@ -414,7 +444,7 @@ export default function RecipeDetailPage() {
     };
 
     if (id) fetchRecipe();
-  }, [id, token]);
+  }, [id, token, API]);
 
   const toggleFavorite = async () => {
     if (!token) {

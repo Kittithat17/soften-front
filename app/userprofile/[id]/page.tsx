@@ -1,11 +1,10 @@
 "use client";
 
-import { useParams,useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   User as UserIcon,
   Award,
-  Pencil,
   Heart,
   Grid2X2,
   Badge as BadgeIcon,
@@ -16,123 +15,194 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HeroHeader2 } from "@/components/hero8-head2";
 import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
-// import type { OwnerPost } from "@/types/userPost";
 import type { PostResponse } from "@/types/post";
 import Link from "next/link";
-import Image from "next/image";
+
+interface FollowerCountResponse {
+  user_id: number;
+  follower_count: number;
+}
+
+interface FollowingCountResponse {
+  user_id: number;
+  following_count: number;
+}
+
+interface FollowerDetail {
+  user_id: number;
+  firstname?: string;
+  lastname?: string;
+  image_url?: string | null;
+}
+
+interface FollowerDetailResponse {
+  followers: FollowerDetail[];
+}
 
 export default function ProfileOther() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const params = useParams();
   const searchParams = useSearchParams();
-  const username = searchParams.get("username");
+  const username = searchParams.get("username") ?? "";
   const id = decodeURIComponent(params.id as string);
-  // const username = decodeURIComponent(params.id as string);
-  const { token, loading: authLoading } = useAuth();
+
+  const { token, loading: authLoading, user: authUser } = useAuth();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<PostResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [followerCount, setFollowerCount] = useState<number>(0);
+  const [followingCount, setFollowingCount] = useState<number>(0);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [followLoading, setFollowLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string | null>(null);
-  
-  console.log(id);     // from path: "123"
-  console.log(username);   // from query: "Nattawat Ruensumrit"    
-  // console.log("Params:", params);
-useEffect(() => {
-  if (!params.id) {
-    console.log("No id in params yet");
-    return;
-  }
 
-  if (authLoading) {
-    console.log("Auth still loading");
-    return;
-  }
-  
-  // if (!token) {
-  //   console.log("No token");
-  //   setLoading(false);
-  //   return;
-  // }
+  useEffect(() => {
+    if (!params.id) return;
+    if (authLoading) return;
 
-  console.log("=== Starting fetch ===");
-  console.log("Frontend decoded id:", id);
-  console.log("Frontend decoded username:", username);
-  
-  let cancelled = false;
-
-  (async () => {
-    try {
-      setErr(null);
-      setLoading(true); // ✅ Reset loading state
-      
-
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-
-
-      const [profileRes, postRes] = await Promise.all([
-        fetch(`${API}/userprofile/${id}`, {
-          headers,
-        }),
-        fetch(`${API}/getallpost/${username}`, {
-          headers,
-        }),
-      ]);
-      
-      console.log("Profile response status:", profileRes.status);
-      console.log("Post response status:", postRes.status);
-      
-      if (!profileRes.ok) throw new Error(await profileRes.text());
-      if (!postRes.ok) throw new Error(await postRes.text());
-      
-      const [profileData, postData] = await Promise.all([
-        profileRes.json(),
-        postRes.json(),
-      ]);
-      
-      console.log("Profile data received:", profileData);
-      console.log("Post data received:", postData);
-      console.log("Posts array from API:", postData.posts);
-      
-      if (!cancelled) {
-        setProfile(profileData);
-        setPosts(postData.posts || []);
-      }
-    } catch (e) {
-      console.error("Fetch error:", e);
-      if (!cancelled)
-        setErr(e instanceof Error ? e.message : "Fetch failed");
-    } finally {
-      if (!cancelled) setLoading(false);
+    const viewedUserId = Number(id);
+    if (Number.isNaN(viewedUserId)) {
+      setErr("Invalid user id");
+      setLoading(false);
+      return;
     }
-  })();
-  
-  return () => {
-    cancelled = true;
-  };
-}, [API, token, authLoading, id, username]);
 
-  // const posts = [
-  //   {
-  //     id: 1,
-  //     img: "https://plus.unsplash.com/premium_photo-1675252369719-dd52bc69c3df?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  //   },
-  //   {
-  //     id: 2,
-  //     img: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  //   },
-  //   {
-  //     id: 3,
-  //     img: "https://images.unsplash.com/photo-1484723091739-30a097e8f929?q=80&w=1049&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  //   },
-  // ];
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setErr(null);
+        setLoading(true);
+
+        const headers: HeadersInit = token
+          ? { Authorization: `Bearer ${token}` }
+          : {};
+
+        const [profileRes, postRes, followerRes, followingRes] =
+          await Promise.all([
+            fetch(`${API}/userprofile/${viewedUserId}`, { headers }),
+            fetch(`${API}/getallpost/${username}`, { headers }),
+            fetch(`${API}/getallfollower/${viewedUserId}`),
+            fetch(`${API}/getallfollowing/${viewedUserId}`),
+          ]);
+
+        if (!profileRes.ok) throw new Error(await profileRes.text());
+        if (!postRes.ok) throw new Error(await postRes.text());
+        if (!followerRes.ok) throw new Error(await followerRes.text());
+        if (!followingRes.ok) throw new Error(await followingRes.text());
+
+        const profileData: UserProfile = await profileRes.json();
+        const postData: { posts?: PostResponse[] } = await postRes.json();
+        const followerData: FollowerCountResponse = await followerRes.json();
+        const followingData: FollowingCountResponse =
+          await followingRes.json();
+
+        if (!cancelled) {
+          setProfile(profileData);
+          setPosts(postData.posts ?? []);
+          setFollowerCount(followerData.follower_count ?? 0);
+          setFollowingCount(followingData.following_count ?? 0);
+        }
+
+        // เช็คว่าเราฟอลเขาอยู่ไหม
+        if (!cancelled && token && authUser) {
+          const detailRes = await fetch(
+            `${API}/api/getallfollowerdetail/${viewedUserId}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+
+          if (detailRes.ok) {
+            const detailData: FollowerDetailResponse = await detailRes.json();
+            const followers = detailData.followers ?? [];
+            const iFollow = followers.some(
+              (follower) => follower.user_id === authUser.id
+            );
+
+            if (!cancelled) {
+              setIsFollowing(iFollow);
+            }
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setErr(e instanceof Error ? e.message : "Fetch failed");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [API, token, authLoading, id, username, params.id, authUser]);
+
+  const handleToggleFollow = async (): Promise<void> => {
+    const viewedUserId = Number(id);
+    if (Number.isNaN(viewedUserId)) return;
+
+    if (!token) {
+      window.location.href = "/Login";
+      return;
+    }
+
+    if (followLoading) return;
+
+    try {
+      setFollowLoading(true);
+
+      if (isFollowing) {
+        // unfollow
+        const res = await fetch(`${API}/api/unfollowuser/${viewedUserId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          console.error("Unfollow failed:", await res.text());
+          return;
+        }
+
+        setIsFollowing(false);
+        setFollowerCount((prev) => (prev > 0 ? prev - 1 : 0));
+      } else {
+        // follow
+        const form = new FormData();
+        form.append("user_id", String(viewedUserId));
+
+        const res = await fetch(`${API}/api/followuser`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        });
+
+        if (!res.ok) {
+          console.error("Follow failed:", await res.text());
+          return;
+        }
+
+        setIsFollowing(true);
+        setFollowerCount((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Toggle follow error:", error);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   if (loading)
     return (
       <>
         <HeroHeader2 />
-       
       </>
     );
+
   if (err)
     return (
       <>
@@ -147,20 +217,18 @@ useEffect(() => {
   const phone = profile?.phone || "—";
   const about = profile?.aboutme || "—";
   const avatar = profile?.image_url;
-  console.log("Posts array:", posts) 
-  console.log("Posts length:", posts.length)
+
   return (
     <>
       <HeroHeader2 />
       <div className="mx-auto w-full max-w-6xl px-4 pt-24 pb-10">
-        {/* ===== Profile Header Card (Desktop look) / Stacked (Mobile) ===== */}
         <Card className="rounded-3xl border-none bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:bg-neutral-900">
           <div className="flex flex-col gap-6 md:flex-row md:items-center">
             {/* Avatar + level */}
             <div className="flex flex-col items-center md:items-start">
               <div className="relative">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#F8D838] ring-4 ring-white md:h-28 md:w-28">
-                  {avatar && avatar !== "" && avatar !== "<nil>" ? ( // ✅ Add checks for empty string and <nil>
+                  {avatar && avatar !== "" && avatar !== "<nil>" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={avatar}
@@ -172,13 +240,11 @@ useEffect(() => {
                   )}
                 </div>
 
-                {/* chef small badge on avatar */}
                 <div className="absolute -left-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow">
                   🍳
                 </div>
               </div>
 
-              {/* level pill */}
               <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
                 <span className="inline-block h-2 w-24 overflow-hidden rounded-full bg-neutral-400/60">
                   <span className="block h-full w-[85%] bg-neutral-700" />
@@ -189,7 +255,6 @@ useEffect(() => {
 
             {/* Middle info block */}
             <div className="flex-1">
-              {/* name + quick stats row (PC) */}
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold md:text-2xl">
@@ -197,25 +262,34 @@ useEffect(() => {
                   </h2>
                   <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-neutral-600">
                     <span>
-                      <b>10</b> posts
+                      <b>{posts.length}</b> posts
                     </span>
                     <span>
-                      <b>200</b> followers
+                      <b>{followerCount}</b> followers
                     </span>
                     <span>
-                      <b>400</b> following
+                      <b>{followingCount}</b> following
                     </span>
                   </div>
                 </div>
 
                 {/* action buttons align right on desktop */}
                 <div className="mt-2 flex flex-col w-full gap-2 md:mt-0 md:w-auto">
-                  {/* <Button className="w-full gap-2 rounded-2xl bg-[#F8D838] text-black hover:bg-[#e7c92f] md:w-auto">
-                    <Link href="/profile/edit" className="flex gap-2">
-                      <Pencil className="h-4 w-4" />
-                      Edit Profile
-                    </Link>
-                  </Button> */}
+                  {/* ปุ่ม Follow / Following (ไม่แสดงถ้าดูโปรไฟล์ตัวเอง) */}
+                  {authUser && Number(id) !== authUser.id && (
+                    <Button
+                      onClick={handleToggleFollow}
+                      disabled={followLoading}
+                      className={`w-full rounded-2xl md:w-auto ${
+                        isFollowing
+                          ? "bg-neutral-800 text-white hover:bg-neutral-700"
+                          : "bg-[#F8D838] text-black hover:bg-[#e7c92f]"
+                      }`}
+                    >
+                      {isFollowing ? "Following" : "Follow"}
+                    </Button>
+                  )}
+
                   <Button
                     variant="outline"
                     className="w-full gap-2 rounded-2xl md:w-auto"
@@ -226,7 +300,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* contact + bio bubble (Mobile style) */}
               <div className="mt-4 rounded-2xl bg-neutral-100 p-4 text-sm text-neutral-700">
                 <p>{email}</p>
                 <p className="mt-1">{phone}</p>
@@ -236,7 +309,7 @@ useEffect(() => {
           </div>
         </Card>
 
-        {/* ===== Tabs ===== */}
+        {/* Tabs */}
         <Card className="mt-6 overflow-hidden rounded-3xl border-none shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
           <Tabs defaultValue="posts" className="w-full">
             <TabsList
@@ -272,12 +345,11 @@ useEffect(() => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Posts grid – PC 3 col, Mobile 3 little squares like mock */}
             <TabsContent value="posts" className="p-6">
               {posts.length > 0 ? (
                 <div className="grid grid-cols-3 gap-4 sm:gap-5">
                   {posts.map((post) => (
-                    <Link 
+                    <Link
                       key={post.post.post_id}
                       href={`/Menu/${post.post.post_id}`}
                       className="block overflow-hidden rounded-2xl"
@@ -298,17 +370,15 @@ useEffect(() => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-600">
-                  No posts yet.
-                </p>
+                <p className="text-sm text-neutral-600">No posts yet.</p>
               )}
             </TabsContent>
 
             <TabsContent value="likes" className="p-6">
-                <p className="text-sm text-neutral-600">
-                Can&#39;t saved posts yet…
-                </p>
-            </TabsContent> 
+              <p className="text-sm text-neutral-600">
+                Can&apos;t saved posts yet…
+              </p>
+            </TabsContent>
 
             <TabsContent value="badges" className="p-6">
               <p className="text-sm text-neutral-600">
