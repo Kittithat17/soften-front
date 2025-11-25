@@ -336,60 +336,61 @@ export default function Profile() {
             </TabsContent>
 
             <TabsContent value="badges" className="p-6">
-  {badgeErr && (
-    <p className="mb-2 text-sm text-red-500">
-      Failed to load badges: {badgeErr}
-    </p>
-  )}
+              {badgeErr && (
+                <p className="mb-2 text-sm text-red-500">
+                  Failed to load badges: {badgeErr}
+                </p>
+              )}
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    {ALL_BADGES.map((badge: BadgeMeta) => {
-      const isUnlocked = unlockedBadgeIds.includes(badge.id);
-      const isEquipped = profile?.badge_id === badge.id;
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {ALL_BADGES.map((badge: BadgeMeta) => {
+                  const isUnlocked = unlockedBadgeIds.includes(badge.id);
+                  const isEquipped = profile?.badge_id === badge.id;
 
-      return (
-        <div
-          key={badge.id}
-          className={
-            "relative flex flex-col items-center justify-between rounded-3xl border p-5 text-center min-h-[220px] transition " +
-            (isUnlocked
-              ? "bg-white"
-              : "bg-neutral-50 text-neutral-400") +
-            (isEquipped
-              ? " ring-2 ring-yellow-400 border-yellow-400"
-              : "")
-          }
-        >
-          <div className="h-20 flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={badge.image}
-              alt={badge.label}
-              className={
-                "h-16 w-16 object-contain " +
-                (!isUnlocked ? "opacity-60" : "")
-              }
-            />
-          </div>
+                  return (
+                    <div
+                      key={badge.id}
+                      className={
+                        "relative flex flex-col items-center justify-between rounded-3xl border p-5 text-center min-h-[220px] transition " +
+                        (isUnlocked
+                          ? "bg-white"
+                          : "bg-neutral-50 text-neutral-400") +
+                        (isEquipped
+                          ? " ring-2 ring-yellow-400 border-yellow-400"
+                          : "")
+                      }
+                    >
+                      <div className="h-20 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={badge.image}
+                          alt={badge.label}
+                          className={
+                            "h-16 w-16 object-contain " +
+                            (!isUnlocked ? "opacity-60" : "")
+                          }
+                        />
+                      </div>
 
-          <div className="mt-3 font-semibold text-sm">{badge.label}</div>
-          <div className="mt-1 text-xs text-neutral-500">
-            {badge.description}
-          </div>
+                      <div className="mt-3 font-semibold text-sm">
+                        {badge.label}
+                      </div>
+                      <div className="mt-1 text-xs text-neutral-500">
+                        {badge.description}
+                      </div>
 
-          {!isUnlocked && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
-                <Lock className="h-5 w-5 text-white" />
+                      {!isUnlocked && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
+                            <Lock className="h-5 w-5 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          )}
-        </div>
-      );
-    })}
-  </div>
-</TabsContent>
-
+            </TabsContent>
           </Tabs>
         </Card>
       </div>

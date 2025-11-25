@@ -10,7 +10,7 @@ import {
   Badge as BadgeIcon,
   Lock,
 } from "lucide-react";
-import { ALL_BADGES, type BadgeMeta } from "@/types/badge";
+import { ALL_BADGES, getBadgeMeta, type BadgeMeta } from "@/types/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -93,7 +93,7 @@ export default function ProfileOther() {
           ? { Authorization: `Bearer ${token}` }
           : {};
 
-          const [profileRes, postRes, followerRes, followingRes, badgesRes] =
+        const [profileRes, postRes, followerRes, followingRes, badgesRes] =
           await Promise.all([
             fetch(`${API}/userprofile/${viewedUserId}`, { headers }),
             fetch(`${API}/getallpost/${username}`, { headers }),
@@ -101,7 +101,6 @@ export default function ProfileOther() {
             fetch(`${API}/getallfollowing/${viewedUserId}`),
             fetch(`${API}/getallbadges/${viewedUserId}`),
           ]);
-        
 
         if (!profileRes.ok) throw new Error(await profileRes.text());
         if (!postRes.ok) throw new Error(await postRes.text());
@@ -128,7 +127,6 @@ export default function ProfileOther() {
         } else if (!cancelled) {
           setBadgeErr(await badgesRes.text());
         }
-        
 
         // เช็คว่าเราฟอลเขาอยู่ไหม
         if (!cancelled && token && authUser) {
@@ -205,7 +203,6 @@ export default function ProfileOther() {
           headers: { Authorization: `Bearer ${token}` },
           body: form,
         });
-        
 
         if (!res.ok) {
           console.error("Follow failed:", await res.text());
@@ -221,7 +218,6 @@ export default function ProfileOther() {
       setFollowLoading(false);
     }
   };
-  
 
   if (loading)
     return (
@@ -244,6 +240,7 @@ export default function ProfileOther() {
   const phone = profile?.phone || "—";
   const about = profile?.aboutme || "—";
   const avatar = profile?.image_url;
+  const currentBadge = getBadgeMeta(profile?.badge_id ?? null);
 
   return (
     <>
@@ -267,16 +264,18 @@ export default function ProfileOther() {
                   )}
                 </div>
 
-                <div className="absolute -left-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow">
-                  🍳
+                <div className="absolute -left-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-blue-200 text-white shadow">
+                  {currentBadge ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={currentBadge.image}
+                      alt={currentBadge.label}
+                      className="h-full w-full object-contain rounded-full"
+                    />
+                  ) : (
+                    <span className="text-lg">?</span>
+                  )}
                 </div>
-              </div>
-
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
-                <span className="inline-block h-2 w-24 overflow-hidden rounded-full bg-neutral-400/60">
-                  <span className="block h-full w-[85%] bg-neutral-700" />
-                </span>
-                Level 10
               </div>
             </div>
 
@@ -316,14 +315,6 @@ export default function ProfileOther() {
                       {isFollowing ? "Following" : "Follow"}
                     </Button>
                   )}
-
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 rounded-2xl md:w-auto"
-                  >
-                    <Award className="h-4 w-4" />
-                    Badges(5)
-                  </Button>
                 </div>
               </div>
 
@@ -402,61 +393,56 @@ export default function ProfileOther() {
             </TabsContent>
 
             <TabsContent value="badges" className="p-6">
-  {badgeErr && (
-    <p className="mb-2 text-sm text-red-500">
-      Failed to load badges: {badgeErr}
-    </p>
-  )}
+              {badgeErr && (
+                <p className="mb-2 text-sm text-red-500">
+                  Failed to load badges: {badgeErr}
+                </p>
+              )}
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    {ALL_BADGES.map((badge: BadgeMeta) => {
-      const isUnlocked = unlockedBadgeIds.includes(badge.id);
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {ALL_BADGES.map((badge: BadgeMeta) => {
+                  const isUnlocked = unlockedBadgeIds.includes(badge.id);
 
-      return (
-        <div
-          key={badge.id}
-          className={
-            "relative flex flex-col items-center justify-between rounded-3xl border p-5 text-center min-h-[220px] " +
-            (isUnlocked
-              ? "bg-white"
-              : "bg-neutral-50 text-neutral-400")
-          }
-        >
-          <div className="h-20 flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={badge.image}
-              alt={badge.label}
-              className={
-                "h-16 w-16 object-contain " +
-                (!isUnlocked ? "opacity-60" : "")
-              }
-            />
-          </div>
+                  return (
+                    <div
+                      key={badge.id}
+                      className={
+                        "relative flex flex-col items-center justify-between rounded-3xl border p-5 text-center min-h-[220px] " +
+                        (isUnlocked
+                          ? "bg-white"
+                          : "bg-neutral-50 text-neutral-400")
+                      }
+                    >
+                      <div className="h-20 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={badge.image}
+                          alt={badge.label}
+                          className={
+                            "h-16 w-16 object-contain " +
+                            (!isUnlocked ? "opacity-60" : "")
+                          }
+                        />
+                      </div>
 
-          <div className="mt-3 font-semibold text-sm">{badge.label}</div>
-          <div className="mt-1 text-xs text-neutral-500">
-            {badge.description}
-          </div>
+                      <div className="mt-3 font-semibold text-sm">
+                        {badge.label}
+                      </div>
+                      <div className="mt-1 text-xs text-neutral-500">
+                        {badge.description}
+                      </div>
 
-          {!isUnlocked && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
-                <Lock className="h-5 w-5 text-white" />
+                      {!isUnlocked && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
+                            <Lock className="h-5 w-5 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          )}
-        </div>
-      );
-    })}
-  </div>
-</TabsContent>
-
-
-            <TabsContent value="badges" className="p-6">
-              <p className="text-sm text-neutral-600">
-                🏆 Badge list coming soon…
-              </p>
             </TabsContent>
           </Tabs>
         </Card>
