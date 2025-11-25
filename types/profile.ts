@@ -8,5 +8,6 @@ export interface UserProfile {
     phone: string;
     aboutme: string;
     image_url: string;
+    badge_id?: number | null;
   }
   

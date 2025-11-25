@@ -8,6 +8,7 @@ import {
   Heart,
   Grid2X2,
   Badge as BadgeIcon,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
 import type { PostResponse } from "@/types/post";
 import Link from "next/link";
+import { ALL_BADGES, getBadgeMeta, type BadgeMeta } from "@/types/badge";
 
 interface SavedPost {
   owner_post: {
@@ -42,9 +44,22 @@ interface FollowingCountResponse {
   following_count: number;
 }
 
+interface UserBadge {
+  badge_id: number;
+  name: string;
+}
+
+interface GetAllBadgesResponse {
+  user_id: number;
+  badges: UserBadge[];
+}
+
 export default function Profile() {
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const { token, loading: authLoading } = useAuth();
+
+  const [unlockedBadgeIds, setUnlockedBadgeIds] = useState<number[]>([]);
+  const [badgeErr, setBadgeErr] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [savedPosts, setSavedPost] = useState<SavedPost[]>([]);
@@ -100,9 +115,10 @@ export default function Profile() {
         if (typeof profileData.user_id === "number") {
           const userId = profileData.user_id;
 
-          const [followerRes, followingRes] = await Promise.all([
+          const [followerRes, followingRes, badgesRes] = await Promise.all([
             fetch(`${API}/getallfollower/${userId}`),
             fetch(`${API}/getallfollowing/${userId}`),
+            fetch(`${API}/getallbadges/${userId}`),
           ]);
 
           if (followerRes.ok) {
@@ -115,6 +131,14 @@ export default function Profile() {
             const followingJson: FollowingCountResponse =
               await followingRes.json();
             followingCountValue = followingJson.following_count ?? 0;
+          }
+
+          if (badgesRes.ok) {
+            const badgesJson: GetAllBadgesResponse = await badgesRes.json();
+            const ids = badgesJson.badges.map((b) => b.badge_id);
+            setUnlockedBadgeIds(ids);
+          } else {
+            setBadgeErr(await badgesRes.text());
           }
         }
 
@@ -160,6 +184,7 @@ export default function Profile() {
   const phone = profile?.phone || "—";
   const about = profile?.aboutme || "—";
   const avatar = profile?.image_url;
+  const currentBadge = getBadgeMeta(profile?.badge_id ?? null);
 
   return (
     <>
@@ -181,15 +206,18 @@ export default function Profile() {
                     <UserIcon className="h-14 w-14 text-black/80" />
                   )}
                 </div>
-                <div className="absolute -left-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow">
-                  🍳
+                <div className="absolute -left-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-blue-200 text-white shadow">
+                  {currentBadge ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={currentBadge.image}
+                      alt={currentBadge.label}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-lg">?</span>
+                  )}
                 </div>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
-                <span className="inline-block h-2 w-24 overflow-hidden rounded-full bg-neutral-400/60">
-                  <span className="block h-full w-[85%] bg-neutral-700" />
-                </span>
-                Level 10
               </div>
             </div>
 
@@ -218,13 +246,6 @@ export default function Profile() {
                       <Pencil className="h-4 w-4" />
                       Edit Profile
                     </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 rounded-2xl md:w-auto"
-                  >
-                    <Award className="h-4 w-4" />
-                    Badges(5)
                   </Button>
                 </div>
               </div>
@@ -315,10 +336,60 @@ export default function Profile() {
             </TabsContent>
 
             <TabsContent value="badges" className="p-6">
-              <p className="text-sm text-neutral-600">
-                🏆 Badge list coming soon…
-              </p>
-            </TabsContent>
+  {badgeErr && (
+    <p className="mb-2 text-sm text-red-500">
+      Failed to load badges: {badgeErr}
+    </p>
+  )}
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {ALL_BADGES.map((badge: BadgeMeta) => {
+      const isUnlocked = unlockedBadgeIds.includes(badge.id);
+      const isEquipped = profile?.badge_id === badge.id;
+
+      return (
+        <div
+          key={badge.id}
+          className={
+            "relative flex flex-col items-center justify-between rounded-3xl border p-5 text-center min-h-[220px] transition " +
+            (isUnlocked
+              ? "bg-white"
+              : "bg-neutral-50 text-neutral-400") +
+            (isEquipped
+              ? " ring-2 ring-yellow-400 border-yellow-400"
+              : "")
+          }
+        >
+          <div className="h-20 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={badge.image}
+              alt={badge.label}
+              className={
+                "h-16 w-16 object-contain " +
+                (!isUnlocked ? "opacity-60" : "")
+              }
+            />
+          </div>
+
+          <div className="mt-3 font-semibold text-sm">{badge.label}</div>
+          <div className="mt-1 text-xs text-neutral-500">
+            {badge.description}
+          </div>
+
+          {!isUnlocked && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
+                <Lock className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</TabsContent>
+
           </Tabs>
         </Card>
       </div>

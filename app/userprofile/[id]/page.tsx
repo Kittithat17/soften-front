@@ -8,7 +8,9 @@ import {
   Heart,
   Grid2X2,
   Badge as BadgeIcon,
+  Lock,
 } from "lucide-react";
+import { ALL_BADGES, type BadgeMeta } from "@/types/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -38,8 +40,20 @@ interface FollowerDetail {
 interface FollowerDetailResponse {
   followers: FollowerDetail[];
 }
+interface UserBadge {
+  badge_id: number;
+  name: string;
+}
+
+interface GetAllBadgesResponse {
+  user_id: number;
+  badges: UserBadge[];
+}
 
 export default function ProfileOther() {
+  const [unlockedBadgeIds, setUnlockedBadgeIds] = useState<number[]>([]);
+  const [badgeErr, setBadgeErr] = useState<string | null>(null);
+
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const params = useParams();
   const searchParams = useSearchParams();
@@ -79,13 +93,15 @@ export default function ProfileOther() {
           ? { Authorization: `Bearer ${token}` }
           : {};
 
-        const [profileRes, postRes, followerRes, followingRes] =
+          const [profileRes, postRes, followerRes, followingRes, badgesRes] =
           await Promise.all([
             fetch(`${API}/userprofile/${viewedUserId}`, { headers }),
             fetch(`${API}/getallpost/${username}`, { headers }),
             fetch(`${API}/getallfollower/${viewedUserId}`),
             fetch(`${API}/getallfollowing/${viewedUserId}`),
+            fetch(`${API}/getallbadges/${viewedUserId}`),
           ]);
+        
 
         if (!profileRes.ok) throw new Error(await profileRes.text());
         if (!postRes.ok) throw new Error(await postRes.text());
@@ -95,8 +111,7 @@ export default function ProfileOther() {
         const profileData: UserProfile = await profileRes.json();
         const postData: { posts?: PostResponse[] } = await postRes.json();
         const followerData: FollowerCountResponse = await followerRes.json();
-        const followingData: FollowingCountResponse =
-          await followingRes.json();
+        const followingData: FollowingCountResponse = await followingRes.json();
 
         if (!cancelled) {
           setProfile(profileData);
@@ -104,6 +119,16 @@ export default function ProfileOther() {
           setFollowerCount(followerData.follower_count ?? 0);
           setFollowingCount(followingData.following_count ?? 0);
         }
+        if (badgesRes.ok) {
+          const badgesJson: GetAllBadgesResponse = await badgesRes.json();
+          const ids = badgesJson.badges.map((b) => b.badge_id);
+          if (!cancelled) {
+            setUnlockedBadgeIds(ids);
+          }
+        } else if (!cancelled) {
+          setBadgeErr(await badgesRes.text());
+        }
+        
 
         // เช็คว่าเราฟอลเขาอยู่ไหม
         if (!cancelled && token && authUser) {
@@ -180,6 +205,7 @@ export default function ProfileOther() {
           headers: { Authorization: `Bearer ${token}` },
           body: form,
         });
+        
 
         if (!res.ok) {
           console.error("Follow failed:", await res.text());
@@ -195,6 +221,7 @@ export default function ProfileOther() {
       setFollowLoading(false);
     }
   };
+  
 
   if (loading)
     return (
@@ -374,11 +401,57 @@ export default function ProfileOther() {
               )}
             </TabsContent>
 
-            <TabsContent value="likes" className="p-6">
-              <p className="text-sm text-neutral-600">
-                Can&apos;t saved posts yet…
-              </p>
-            </TabsContent>
+            <TabsContent value="badges" className="p-6">
+  {badgeErr && (
+    <p className="mb-2 text-sm text-red-500">
+      Failed to load badges: {badgeErr}
+    </p>
+  )}
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {ALL_BADGES.map((badge: BadgeMeta) => {
+      const isUnlocked = unlockedBadgeIds.includes(badge.id);
+
+      return (
+        <div
+          key={badge.id}
+          className={
+            "relative flex flex-col items-center justify-between rounded-3xl border p-5 text-center min-h-[220px] " +
+            (isUnlocked
+              ? "bg-white"
+              : "bg-neutral-50 text-neutral-400")
+          }
+        >
+          <div className="h-20 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={badge.image}
+              alt={badge.label}
+              className={
+                "h-16 w-16 object-contain " +
+                (!isUnlocked ? "opacity-60" : "")
+              }
+            />
+          </div>
+
+          <div className="mt-3 font-semibold text-sm">{badge.label}</div>
+          <div className="mt-1 text-xs text-neutral-500">
+            {badge.description}
+          </div>
+
+          {!isUnlocked && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
+                <Lock className="h-5 w-5 text-white" />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</TabsContent>
+
 
             <TabsContent value="badges" className="p-6">
               <p className="text-sm text-neutral-600">

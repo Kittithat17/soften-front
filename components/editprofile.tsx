@@ -12,7 +12,16 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { UserProfile } from "@/types/profile";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
+import { Lock } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ALL_BADGES, BadgeMeta } from "@/types/badge";
 
 type FormState = {
   firstname: string;
@@ -23,8 +32,22 @@ type FormState = {
   imageFile: File | null;
   imagePreview: string | null;
 };
+interface UserBadge {
+  badge_id: number;
+  name: string;
+}
+
+interface GetAllBadgesResponse {
+  user_id: number;
+  badges: UserBadge[];
+}
 
 export default function EditProfilePage() {
+  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
+  const [unlockedBadgeIds, setUnlockedBadgeIds] = useState<number[]>([]);
+  const [badgeLoading, setBadgeLoading] = useState(false);
+  const [badgeErr, setBadgeErr] = useState<string | null>(null);
+
   const API = process.env.NEXT_PUBLIC_API_BASE!;
   const { token } = useAuth();
   const router = useRouter();
@@ -42,7 +65,7 @@ export default function EditProfilePage() {
   });
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
+  const [currentBadgeId, setCurrentBadgeId] = useState<number | null>(null);
   // โหลดโปรไฟล์เดิมมาเติมในฟอร์ม
   useEffect(() => {
     if (!token) {
@@ -69,6 +92,7 @@ export default function EditProfilePage() {
           phone: data.phone ?? "",
           aboutme: data.aboutme ?? "",
           image_url: data.image_url ?? "",
+          badge_id: data.badge_id ?? null,
         };
 
         setOriginal(normalized);
@@ -82,6 +106,7 @@ export default function EditProfilePage() {
           imageFile: null,
           imagePreview: normalized.image_url || null,
         }));
+        setCurrentBadgeId(normalized.badge_id ?? null);
       } catch (e) {
         if (!(e instanceof DOMException && e.name === "AbortError")) {
           setErr(e instanceof Error ? e.message : "Load profile failed");
@@ -134,6 +159,62 @@ export default function EditProfilePage() {
       imagePreview: original.image_url || null,
     });
   };
+  const openBadgeModal = async () => {
+    if (!original?.user_id) {
+      setBadgeModalOpen(true);
+      return;
+    }
+
+    setBadgeModalOpen(true);
+    setBadgeLoading(true);
+    setBadgeErr(null);
+
+    try {
+      const res = await fetch(`${API}/getallbadges/${original.user_id}`);
+      if (!res.ok) throw new Error(await res.text());
+
+      const json: GetAllBadgesResponse = await res.json();
+
+      const ids = json.badges.map((b) => b.badge_id);
+      setUnlockedBadgeIds(ids);
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "Failed to load badges";
+      setBadgeErr(msg);
+    } finally {
+      setBadgeLoading(false);
+    }
+  };
+  const updateBadge = async (badgeId: number) => {
+    if (!token) return;
+
+    try {
+      const fd = new FormData();
+      fd.append("badge_id", String(badgeId));
+
+      const res = await fetch(`${API}/api/userprofile`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        throw new Error(msg || `Update badge failed (${res.status})`);
+      }
+
+      toast.success("Badge updated ✨");
+      setCurrentBadgeId(badgeId);
+
+      setOriginal((prev) => (prev ? { ...prev, badge_id: badgeId } : prev));
+
+      setBadgeModalOpen(false);
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "Failed to update badge";
+      toast.error(msg);
+    }
+  };
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
@@ -152,6 +233,9 @@ export default function EditProfilePage() {
 
       if (form.imageFile) {
         fd.append("image", form.imageFile, form.imageFile.name);
+      }
+      if (currentBadgeId !== original?.badge_id && currentBadgeId !== null) {
+        fd.append("badge_id", String(currentBadgeId));
       }
 
       // ถ้าไม่มีอะไรเปลี่ยนเลย ก็ไม่ต้องยิง
@@ -217,7 +301,7 @@ export default function EditProfilePage() {
             <button
               type="button"
               className="text-gray-500 hover:text-black cursor-pointer text-2xl "
-              onClick={() => router.back()} 
+              onClick={() => router.back()}
             >
               ←
             </button>
@@ -268,7 +352,12 @@ export default function EditProfilePage() {
               >
                 <Camera className="mr-2 h-4 w-4" /> Change Photo
               </Button>
-              <Button type="button" variant="outline" size="sm" disabled>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openBadgeModal}
+              >
                 <Award className="mr-2 h-4 w-4" /> Change Badge
               </Button>
             </div>
@@ -344,6 +433,91 @@ export default function EditProfilePage() {
               </Button>
             </div>
           </form>
+          <Dialog open={badgeModalOpen} onOpenChange={setBadgeModalOpen}>
+            <DialogContent
+              className="
+    w-[90%] 
+    max-w-sm 
+    sm:max-w-md 
+    md:max-w-lg 
+    lg:max-w-xl
+  "
+            >
+              <DialogHeader>
+                <DialogTitle>Select a badge</DialogTitle>
+                <DialogDescription>
+                  Choose a badge you’ve unlocked. Locked badges are shown with a
+                  lock icon.
+                </DialogDescription>
+              </DialogHeader>
+
+              {badgeLoading && (
+                <p className="text-sm text-gray-500">Loading badges…</p>
+              )}
+
+              {badgeErr && (
+                <p className="text-sm text-red-500 mb-2">{badgeErr}</p>
+              )}
+
+              {!badgeLoading && (
+                <div className="grid grid-cols-2 gap-4">
+                  {ALL_BADGES.map((badge: BadgeMeta) => {
+                    const isUnlocked = unlockedBadgeIds.includes(badge.id);
+                    const isActive = currentBadgeId === badge.id;
+
+                    return (
+                      <button
+                        key={badge.id}
+                        type="button"
+                        disabled={!isUnlocked}
+                        onClick={() => isUnlocked && updateBadge(badge.id)}
+                        className={
+                          "relative flex flex-col items-center rounded-2xl border p-3 transition " +
+                          (isUnlocked
+                            ? "hover:border-yellow-400 hover:shadow cursor-pointer"
+                            : "opacity-50 cursor-not-allowed") +
+                          (isActive
+                            ? " border-yellow-500 ring-2 ring-yellow-400"
+                            : "")
+                        }
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={badge.image}
+                          alt={badge.label}
+                          className="mb-2 h-20 w-20 object-contain"
+                        />
+                        <div className="text-sm font-semibold">
+                          {badge.label}
+                        </div>
+                        <div className="text-xs text-gray-500 text-center">
+                          {badge.description}
+                        </div>
+
+                        {!isUnlocked && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/70">
+                              <Lock className="h-5 w-5 text-white" />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setBadgeModalOpen(false)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </Card>
       </div>
     </>
