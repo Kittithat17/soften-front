@@ -35,7 +35,7 @@ function AuthSuccessInner() {
       if (role) localStorage.setItem("role", role);
 
       // รีโหลดทั้งหน้าให้ AuthContext hydrate แน่ ๆ
-      window.location.replace("/");
+      window.location.replace("/Menu");
     })();
   }, [q, API]);
 
