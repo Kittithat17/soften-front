@@ -425,6 +425,7 @@ export default function EditProfilePage() {
               <Button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                onClick={() => router.push("/profile")}
               >
                 Submit
               </Button>
