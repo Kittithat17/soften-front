@@ -23,7 +23,7 @@ const mockRecipes: Recipe[] = [
 
     rating: 4.8,
     totalRatings: 124,
-    cookTime: "30 นาที",
+    
     servings: 4,
     categories: ["one-dish", "spicy"],
     ingredients: [
