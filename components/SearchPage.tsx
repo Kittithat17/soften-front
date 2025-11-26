@@ -197,10 +197,7 @@ const normalizeIngredientTags = (p: ApiPost): string[] => {
 };
 
 // ✅ Move helper functions outside
-const minutesFrom = (cookTime: string) => {
-  const m = cookTime.match(/\d+/);
-  return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
-};
+
 
 const textIncludesAny = (text: string, words: string[]) => {
   const low = text.toLowerCase();
@@ -275,7 +272,7 @@ export default function SearchPage() {
             author: { id: 0, username: "Unknown" },
             rating: typeof p.star === "number" ? p.star : 0,
             totalRatings: 0,
-            cookTime: "30 mins",
+           
             servings: 1,
             categories: catSlugs,
             ingredients: p.ingredients ?? [],
@@ -325,7 +322,6 @@ export default function SearchPage() {
         author: { id: 0, username: "Unknown" },
         rating: typeof detail.star === "number" ? detail.star : 0,
         totalRatings: 0,
-        cookTime: "30 mins",
         servings: 1,
         categories: catSlugs,
         ingredients: detail.ingredients ?? [],
@@ -361,7 +357,9 @@ export default function SearchPage() {
         ]) ||
         ingredientsIncludeAny(r.ingredients, ["chili", "พริก"]),
 
-      quick: (r) => minutesFrom(r.cookTime) <= 15,
+        quick: (r) =>
+          (r.categories ?? []).includes("quick"),
+        
 
       vegetarian: (r) =>
         (r.categories ?? []).includes("vegetarian") ||

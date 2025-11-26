@@ -218,7 +218,6 @@ function buildRecipeFromApi(p: ApiPost, u: ApiOwner | undefined): Recipe {
     author: { id: u?.user_id ?? 0, username: u?.username ?? "Unknown" },
     rating: typeof p.star === "number" ? p.star : 0, // ⭐ ดึงจาก BE
     totalRatings: 0,
-    cookTime: "30 mins",
     servings: 1,
     categories: catSlugs,
     ingredients: Array.isArray(p.ingredients) ? p.ingredients.map(String) : [],
@@ -790,9 +789,7 @@ export default function RecipeDetailPage() {
                 })}
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 dark:text-white md:flex md:items-center md:gap-6">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" /> {recipe.cookTime}
-                </span>
+                
                 <span className="flex items-center gap-1">
                   <Users className="h-4 w-4" /> {recipe.servings} servings
                 </span>

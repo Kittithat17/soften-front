@@ -15,7 +15,6 @@ export interface Comment {
     author: User;
     rating: number;
     totalRatings: number;
-    cookTime: string;
     servings: number;
     categories: string[];
     ingredients: string[];

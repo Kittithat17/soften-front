@@ -420,8 +420,12 @@ export default function PostRecipeForm({
       .filter((id): id is number => typeof id === "number");
 
     const ingredientTagIds = Array.from(new Set(ingredientTagIdsRaw));
-    const ingredientNames = ingredientTagIds.map(
-      (id) => INGREDIENT_ID_TO_NAME[id]
+    const ingredientNames = Array.from(
+      new Set(
+        ingredientTags
+          .map((t) => t.trim())
+          .filter(Boolean)
+      )
     );
 
     const categoryIds = formData.categories.map((c) => CATEGORY_ID_MAP[c]);
@@ -436,6 +440,7 @@ export default function PostRecipeForm({
     
     body.append("categories_tags", JSON.stringify(categoryIds));
     body.append("ingredients_tags", JSON.stringify(ingredientTagIds));
+    body.append("ingredient_names", JSON.stringify(ingredientNames));
     body.append("ingredients", JSON.stringify(cleanedIngredients));
     body.append("instructions", JSON.stringify(cleanedInstructions));
     if (formData.image) body.append("image", formData.image);
